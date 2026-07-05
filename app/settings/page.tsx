@@ -512,8 +512,9 @@ export default function SettingsPage() {
                         const { pullSync, forcePushSync } = await import('@/lib/db/sync');
                         const toast = (await import('react-hot-toast')).default;
                         toast.loading('Syncing...', { id: 'sync' });
-                        await forcePushSync();
+                        // MUST pull first so we don't overwrite remote changes!
                         const pulled = await pullSync();
+                        await forcePushSync();
                         toast.success('Sync complete!', { id: 'sync' });
                         if (pulled) window.location.reload();
                       }} 
