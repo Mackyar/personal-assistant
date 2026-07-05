@@ -1,0 +1,555 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import {
+  Bot, Key, Eye, EyeOff, Check, RefreshCw, Download, AlertCircle,
+  Cloud, Wifi, WifiOff, Trash2, Calendar, ChevronDown, ChevronUp
+} from 'lucide-react';
+import { getSettings, saveSettings } from '@/lib/db/settings';
+import { OllamaProvider } from '@/lib/ai/providers/ollama';
+import { db } from '@/lib/db/schema';
+import type { AppSettings } from '@/lib/db/schema';
+import { cn } from '@/lib/utils';
+import JSZip from 'jszip';
+import toast from 'react-hot-toast';
+
+const PROVIDERS = [
+  {
+    id: 'openai' as const,
+    label: 'OpenAI',
+    logo: '🤖',
+    needsKey: true,
+    keyPlaceholder: 'sk-...',
+    docsUrl: 'https://platform.openai.com/api-keys',
+    models: [
+      'o4-mini', 'o3', 'o3-mini', 'o1', 'o1-mini',
+      'gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano',
+      'chatgpt-4o-latest', 'gpt-4o', 'gpt-4o-mini',
+      'gpt-4-turbo', 'gpt-3.5-turbo',
+    ],
+    defaultModel: 'gpt-4o-mini',
+  },
+  {
+    id: 'gemini' as const,
+    label: 'Google Gemini',
+    logo: '✨',
+    needsKey: true,
+    keyPlaceholder: 'AIza...',
+    docsUrl: 'https://aistudio.google.com/apikey',
+    models: [
+      'gemini-2.5-pro', 'gemini-2.5-flash',
+      'gemini-2.0-flash', 'gemini-2.0-flash-lite',
+      'gemini-1.5-pro', 'gemini-1.5-flash',
+    ],
+    defaultModel: 'gemini-2.5-flash',
+  },
+  {
+    id: 'anthropic' as const,
+    label: 'Anthropic Claude',
+    logo: '🔷',
+    needsKey: true,
+    keyPlaceholder: 'sk-ant-...',
+    docsUrl: 'https://console.anthropic.com/settings/keys',
+    models: [
+      'claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-4-5',
+      'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022',
+      'claude-3-opus-20240229', 'claude-3-haiku-20240307',
+    ],
+    defaultModel: 'claude-3-5-haiku-20241022',
+  },
+  {
+    id: 'openrouter' as const,
+    label: 'OpenRouter',
+    logo: '🔀',
+    needsKey: true,
+    keyPlaceholder: 'sk-or-...',
+    docsUrl: 'https://openrouter.ai/keys',
+    models: [
+      'openai/gpt-4o', 'openai/gpt-4o-mini', 'openai/o3-mini',
+      'anthropic/claude-3.5-sonnet', 'anthropic/claude-3-haiku',
+      'google/gemini-2.0-flash-001',
+      'meta-llama/llama-3.3-70b-instruct',
+      'meta-llama/llama-3.1-8b-instruct:free',
+      'mistralai/mistral-7b-instruct:free',
+      'deepseek/deepseek-r1',
+    ],
+    defaultModel: 'openai/gpt-4o-mini',
+  },
+  {
+    id: 'ollama' as const,
+    label: 'Ollama (Local)',
+    logo: '🦙',
+    needsKey: false,
+    keyPlaceholder: '',
+    docsUrl: 'https://ollama.com',
+    models: [],
+    defaultModel: 'llama3',
+  },
+];
+
+type ProviderId = typeof PROVIDERS[number]['id'];
+
+const KEY_FIELDS: Record<string, keyof AppSettings> = {
+  openai: 'openaiKey',
+  gemini: 'geminiKey',
+  anthropic: 'anthropicKey',
+  openrouter: 'openrouterKey',
+};
+const MODEL_FIELDS: Record<string, keyof AppSettings> = {
+  openai: 'openaiModel',
+  gemini: 'geminiModel',
+  anthropic: 'anthropicModel',
+  openrouter: 'openrouterModel',
+  ollama: 'ollamaModel',
+};
+
+export default function SettingsPage() {
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
+  const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({});
+  const [syncExpanded, setSyncExpanded] = useState(false);
+  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
+  const [ollamaStatus, setOllamaStatus] = useState<'unknown' | 'online' | 'offline'>('unknown');
+  const [checkingOllama, setCheckingOllama] = useState(false);
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  async function loadSettings() {
+    const s = await getSettings();
+    setSettings(s);
+    // Auto-expand active provider
+    setExpandedProviders((prev) => ({ ...prev, [s.activeProvider]: true }));
+    // Check Ollama in background
+    checkOllama(s.ollamaBaseUrl);
+  }
+
+  async function checkOllama(baseUrl?: string) {
+    setCheckingOllama(true);
+    const url = baseUrl || 'http://localhost:11434';
+    const available = await OllamaProvider.isAvailable(url);
+    setOllamaStatus(available ? 'online' : 'offline');
+    if (available) {
+      const p = new OllamaProvider(url, '');
+      const models = await p.listModels();
+      setOllamaModels(models);
+    }
+    setCheckingOllama(false);
+  }
+
+  async function setActiveProvider(id: ProviderId) {
+    if (!settings) return;
+    await saveSettings({ activeProvider: id });
+    await loadSettings();
+    toast.success(`Switched to ${PROVIDERS.find((p) => p.id === id)?.label}`);
+  }
+
+  async function saveKey(providerId: string, value: string) {
+    const field = KEY_FIELDS[providerId];
+    if (!field) return;
+    await saveSettings({ [field]: value });
+    await loadSettings();
+    toast.success('API key saved');
+  }
+
+  async function saveModel(providerId: string, value: string) {
+    const field = MODEL_FIELDS[providerId];
+    if (!field) return;
+    await saveSettings({ [field]: value });
+    await loadSettings();
+    toast.success('Model updated');
+  }
+
+  async function saveSyncSetting(field: 'supabaseUrl' | 'supabaseKey', value: string) {
+    await saveSettings({ [field]: value });
+    await loadSettings();
+    toast.success('Sync settings updated');
+  }
+
+  async function handleExportZip() {
+    const zip = new JSZip();
+    const [notes, events, reminders, conversations] = await Promise.all([
+      db.notes.toArray(), db.events.toArray(),
+      db.reminders.toArray(), db.conversations.toArray(),
+    ]);
+    zip.file('notes.json', JSON.stringify(notes, null, 2));
+    zip.file('events.json', JSON.stringify(events, null, 2));
+    zip.file('reminders.json', JSON.stringify(reminders, null, 2));
+    zip.file('conversations.json', JSON.stringify(conversations, null, 2));
+    zip.file('readme.txt', `Personal Assistant Backup\nDate: ${new Date().toLocaleString()}\nNotes: ${notes.length} | Events: ${events.length} | Reminders: ${reminders.length}`);
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `pa-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Workspace exported!');
+  }
+
+  async function handleClearAll() {
+    if (!confirm('This will permanently delete ALL your data. This cannot be undone. Continue?')) return;
+    await Promise.all([
+      db.notes.clear(), db.events.clear(), db.reminders.clear(),
+      db.conversations.clear(), db.messages.clear(), db.embeddings.clear(),
+    ]);
+    toast.success('All data cleared');
+  }
+
+  if (!settings) return (
+    <div className="flex items-center justify-center h-full">
+      <div className="flex gap-1.5"><span className="thinking-dot" /><span className="thinking-dot" /><span className="thinking-dot" /></div>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center px-4 py-3 border-b border-border" style={{ background: 'hsl(var(--card) / 0.5)' }}>
+        <h1 className="text-lg font-semibold">Settings</h1>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+
+          {/* Active Provider Banner */}
+          <div className="glass rounded-2xl p-4" style={{ border: '1px solid hsl(var(--primary) / 0.2)' }}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
+                style={{ background: 'linear-gradient(135deg, hsl(250,89%,69%), hsl(210,90%,60%))' }}>
+                {PROVIDERS.find((p) => p.id === settings.activeProvider)?.logo}
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Currently Active</p>
+                <p className="text-sm font-bold text-foreground">
+                  {PROVIDERS.find((p) => p.id === settings.activeProvider)?.label}
+                  {' · '}
+                  <span className="text-primary font-mono text-xs">
+                    {settings[MODEL_FIELDS[settings.activeProvider]] as string}
+                  </span>
+                </p>
+              </div>
+              <div className="ml-auto">
+                {settings.activeProvider === 'ollama' ? (
+                  ollamaStatus === 'online'
+                    ? <span className="flex items-center gap-1 text-xs" style={{ color: '#4ade80' }}><Wifi size={12} />Online</span>
+                    : <span className="flex items-center gap-1 text-xs" style={{ color: '#f87171' }}><WifiOff size={12} />Offline</span>
+                ) : (
+                  <span className="flex items-center gap-1 text-xs" style={{ color: '#60a5fa' }}><Cloud size={12} />Cloud</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* AI Providers */}
+          <div>
+            <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Bot size={15} className="text-primary" />
+              AI Providers
+            </h2>
+            <div className="space-y-2">
+              {PROVIDERS.map((provider) => {
+                const isActive = settings.activeProvider === provider.id;
+                const keyField = KEY_FIELDS[provider.id];
+                const modelField = MODEL_FIELDS[provider.id];
+                const currentKey = keyField ? (settings[keyField] as string | undefined) : undefined;
+                const currentModel = (settings[modelField] as string) || provider.defaultModel;
+                const isExpanded = expandedProviders[provider.id] ?? false;
+
+                return (
+                  <div
+                    key={provider.id}
+                    className="bg-card rounded-2xl overflow-hidden transition-all"
+                    style={{ border: isActive ? '1px solid hsl(var(--primary) / 0.5)' : '1px solid hsl(var(--border))' }}
+                  >
+                    {/* Provider header — always clickable */}
+                    <button
+                      type="button"
+                      onClick={() => setExpandedProviders((prev) => ({ ...prev, [provider.id]: !prev[provider.id] }))}
+                      className="w-full flex items-center gap-3 p-4 text-left hover:bg-secondary transition-all"
+                    >
+                      <span className="text-xl">{provider.logo}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">{provider.label}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {provider.id === 'ollama'
+                            ? (ollamaStatus === 'online' ? `${ollamaModels.length} model(s) found` : 'Run Ollama on your laptop')
+                            : currentKey ? `Key saved · ${currentModel}` : 'No API key configured'
+                          }
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {isActive && (
+                          <span className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg"
+                            style={{ background: 'hsl(var(--primary) / 0.2)', color: 'hsl(var(--primary))' }}>
+                            <Check size={10} />Active
+                          </span>
+                        )}
+                        {isExpanded ? <ChevronUp size={14} className="text-muted-foreground" /> : <ChevronDown size={14} className="text-muted-foreground" />}
+                      </div>
+                    </button>
+
+                    {/* Expanded body */}
+                    {isExpanded && (
+                      <div className="px-4 pb-4 space-y-4 border-t border-border pt-4">
+                        {/* API Key */}
+                        {provider.needsKey && (
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1.5 flex items-center justify-between">
+                              <span className="flex items-center gap-1.5"><Key size={11} />API Key</span>
+                              <a href={provider.docsUrl} target="_blank" rel="noreferrer"
+                                className="text-primary hover:underline">Get key →</a>
+                            </label>
+                            <div className="relative">
+                              <input
+                                type={showKeys[provider.id] ? 'text' : 'password'}
+                                defaultValue={currentKey || ''}
+                                placeholder={provider.keyPlaceholder || `Enter your ${provider.label} API key...`}
+                                onBlur={(e) => {
+                                  if (e.target.value !== currentKey) {
+                                    saveKey(provider.id, e.target.value);
+                                  }
+                                }}
+                                className="input-base w-full pr-10 text-xs font-mono"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowKeys((p) => ({ ...p, [provider.id]: !p[provider.id] }))}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                              >
+                                {showKeys[provider.id] ? <EyeOff size={13} /> : <Eye size={13} />}
+                              </button>
+                            </div>
+                            {currentKey && (
+                              <p className="text-xs mt-1 flex items-center gap-1" style={{ color: '#4ade80' }}>
+                                <Check size={10} />Key saved · stored only on your device
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Ollama URL */}
+                        {provider.id === 'ollama' && (
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1.5 block">Ollama Base URL</label>
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                defaultValue={settings.ollamaBaseUrl}
+                                onBlur={(e) => saveSettings({ ollamaBaseUrl: e.target.value })}
+                                className="input-base flex-1 text-xs font-mono"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => checkOllama(settings.ollamaBaseUrl)}
+                                disabled={checkingOllama}
+                                className="btn-ghost border border-border px-3 flex items-center gap-1.5 text-xs"
+                              >
+                                <RefreshCw size={12} className={checkingOllama ? 'animate-spin' : ''} />
+                                Refresh
+                              </button>
+                            </div>
+                            {ollamaStatus === 'offline' && (
+                              <p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: '#fbbf24' }}>
+                                <AlertCircle size={11} />Ollama not detected. Start Ollama on your laptop first.
+                              </p>
+                            )}
+                            {ollamaStatus === 'online' && ollamaModels.length === 0 && (
+                              <p className="text-xs mt-1.5 text-muted-foreground">
+                                Ollama running but no models found. Run: <code className="text-primary">ollama pull llama3</code>
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Model selector */}
+                        <div>
+                          <label className="text-xs text-muted-foreground mb-1.5 block">Model</label>
+                          {provider.id === 'ollama' ? (
+                            ollamaModels.length > 0 ? (
+                              <select
+                                value={currentModel}
+                                onChange={(e) => saveModel(provider.id, e.target.value)}
+                                className="input-base w-full text-xs"
+                              >
+                                {ollamaModels.map((m) => <option key={m} value={m}>{m}</option>)}
+                              </select>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">
+                                {ollamaStatus === 'online'
+                                  ? 'No models found. Pull a model with Ollama.'
+                                  : 'Ollama not running.'}
+                              </p>
+                            )
+                          ) : (
+                            <select
+                              value={currentModel}
+                              onChange={(e) => saveModel(provider.id, e.target.value)}
+                              className="input-base w-full text-xs"
+                            >
+                              {provider.models.map((m) => <option key={m} value={m}>{m}</option>)}
+                            </select>
+                          )}
+                        </div>
+
+                        {/* Set as active */}
+                        {!isActive && (
+                          <button
+                            type="button"
+                            onClick={() => setActiveProvider(provider.id)}
+                            className="w-full btn-primary text-xs py-2.5 flex items-center justify-center gap-1.5"
+                          >
+                            Use {provider.label} as Active Provider
+                          </button>
+                        )}
+                        {isActive && (
+                          <div className="text-xs text-center text-muted-foreground py-1">
+                            ✅ This provider is currently active
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Google Calendar placeholder */}
+          <div>
+            <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Calendar size={15} style={{ color: '#60a5fa' }} />
+              Google Calendar
+              <span className="text-xs text-muted-foreground font-normal">(Coming soon)</span>
+            </h2>
+            <div className="bg-card border border-border rounded-2xl p-4" style={{ opacity: 0.7 }}>
+              <p className="text-xs text-muted-foreground">
+                Two-way Google Calendar sync will be added in a future update. All your events are stored locally and fully accessible right now.
+              </p>
+            </div>
+          </div>
+
+          {/* Data Management */}
+          <div>
+            <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Download size={15} style={{ color: '#4ade80' }} />
+              Data Management
+            </h2>
+            <div className="bg-card border border-border rounded-2xl overflow-hidden">
+              <div className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Export Workspace</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Download all your data as a ZIP backup</p>
+                </div>
+                <button onClick={handleExportZip} className="btn-primary text-xs flex items-center gap-1.5">
+                  <Download size={12} />Export ZIP
+                </button>
+              </div>
+              <div className="border-t border-border p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-destructive">Clear All Data</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Permanently delete everything</p>
+                </div>
+                <button onClick={handleClearAll}
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all"
+                  style={{ background: 'hsl(var(--destructive) / 0.2)', color: 'hsl(var(--destructive))' }}>
+                  <Trash2 size={12} />Clear
+                </button>
+              </div>
+            </div>
+            <div 
+              className="bg-card border border-border rounded-2xl overflow-hidden mt-3 transition-all"
+              style={{ border: (settings?.supabaseUrl && settings?.supabaseKey) ? '1px solid hsl(var(--primary) / 0.5)' : '1px solid hsl(var(--border))' }}
+            >
+              <button
+                type="button"
+                onClick={() => setSyncExpanded(!syncExpanded)}
+                className="w-full p-4 flex items-center justify-between hover:bg-secondary transition-all text-left"
+              >
+                <div>
+                  <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <Cloud size={14} className={(settings?.supabaseUrl && settings?.supabaseKey) ? "text-primary" : "text-muted-foreground"} />
+                    Cloud Sync (Supabase)
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {(settings?.supabaseUrl && settings?.supabaseKey) ? 'Configured & Active' : 'Bring Your Own Database (Optional)'}
+                  </p>
+                </div>
+                {syncExpanded ? <ChevronUp size={14} className="text-muted-foreground" /> : <ChevronDown size={14} className="text-muted-foreground" />}
+              </button>
+
+              {syncExpanded && (
+                <div className="px-4 pb-4 space-y-4 border-t border-border pt-4">
+                  <p className="text-xs text-muted-foreground">
+                    To sync across devices safely, create a free project at supabase.com, run the setup SQL, and paste your keys here. 
+                    Your data will sync automatically in the background.
+                  </p>
+                  
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1.5 block">Project URL</label>
+                    <input
+                      type="url"
+                      defaultValue={settings?.supabaseUrl || ''}
+                      placeholder="https://your-project.supabase.co"
+                      onBlur={(e) => saveSyncSetting('supabaseUrl', e.target.value.trim())}
+                      className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1.5 block">Anon Public API Key</label>
+                    <input
+                      type="password"
+                      defaultValue={settings?.supabaseKey || ''}
+                      placeholder="eyJhb..."
+                      onBlur={(e) => saveSyncSetting('supabaseKey', e.target.value.trim())}
+                      className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-colors"
+                    />
+                  </div>
+
+                  <div className="pt-2 space-y-2">
+                    <button 
+                      onClick={async () => {
+                        const { pullSync } = await import('@/lib/db/sync');
+                        const toast = (await import('react-hot-toast')).default;
+                        toast.loading('Syncing...', { id: 'sync' });
+                        const pulled = await pullSync();
+                        toast.success(pulled ? 'Sync complete (new data pulled)' : 'Sync complete (up to date)', { id: 'sync' });
+                        if (pulled) window.location.reload();
+                      }} 
+                      disabled={!(settings?.supabaseUrl && settings?.supabaseKey)}
+                      className="btn-primary w-full text-xs flex justify-center items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white border-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RefreshCw size={12} /> Force Sync Now
+                    </button>
+
+                    <button 
+                      onClick={() => {
+                        if (!settings?.supabaseUrl || !settings?.supabaseKey) {
+                           import('react-hot-toast').then(m => m.default.error('Please save your Supabase keys first!'));
+                           return;
+                        }
+                        const url = `${window.location.origin}/api/calendar/feed?url=${encodeURIComponent(settings.supabaseUrl || '')}&key=${encodeURIComponent(settings.supabaseKey || '')}`;
+                        navigator.clipboard.writeText(url);
+                        import('react-hot-toast').then(m => m.default.success('Calendar URL copied! Paste this into Google Calendar.'));
+                      }} 
+                      className="btn-primary w-full text-xs flex justify-center items-center gap-1.5 bg-purple-500 hover:bg-purple-600 text-white border-0"
+                    >
+                      <Calendar size={12} /> Get Calendar Feed Link (.ics)
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Privacy */}
+          <div className="glass rounded-2xl p-4 border border-border">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              🔒 <strong className="text-foreground">Privacy first.</strong> All your data lives in your browser's IndexedDB — never on any server. API keys are stored only on your device. Each person who visits this app on their own device gets a completely separate, empty workspace.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
