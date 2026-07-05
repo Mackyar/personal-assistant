@@ -66,24 +66,29 @@ export async function mergeDb(remoteData: SyncPayload): Promise<void> {
 let syncTimeout: NodeJS.Timeout | null = null;
 let isSyncing = false;
 
-// Debounced push
+export async function forcePushSync() {
+  try {
+    const supabase = await getSupabaseClient();
+    if (!supabase) return false;
+
+    const payload = await exportDb();
+    await supabase.from('sync_state').upsert({
+      id: 'user_1',
+      data: payload,
+      updated_at: new Date().toISOString()
+    });
+    localStorage.setItem('last_sync_push', new Date().toISOString());
+    return true;
+  } catch (err) {
+    console.error('Push sync failed:', err);
+    return false;
+  }
+}
+
 export function pushSync() {
   if (syncTimeout) clearTimeout(syncTimeout);
-  syncTimeout = setTimeout(async () => {
-    try {
-      const supabase = await getSupabaseClient();
-      if (!supabase) return; // Sync not configured
-
-      const payload = await exportDb();
-      await supabase.from('sync_state').upsert({
-        id: 'user_1',
-        data: payload,
-        updated_at: new Date().toISOString()
-      });
-      localStorage.setItem('last_sync_push', new Date().toISOString());
-    } catch (err) {
-      console.error('Push sync failed:', err);
-    }
+  syncTimeout = setTimeout(() => {
+    forcePushSync();
   }, 2000); // 2 second debounce
 }
 

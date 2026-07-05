@@ -509,11 +509,12 @@ export default function SettingsPage() {
                   <div className="pt-2 space-y-2">
                     <button 
                       onClick={async () => {
-                        const { pullSync } = await import('@/lib/db/sync');
+                        const { pullSync, forcePushSync } = await import('@/lib/db/sync');
                         const toast = (await import('react-hot-toast')).default;
                         toast.loading('Syncing...', { id: 'sync' });
+                        await forcePushSync();
                         const pulled = await pullSync();
-                        toast.success(pulled ? 'Sync complete (new data pulled)' : 'Sync complete (up to date)', { id: 'sync' });
+                        toast.success('Sync complete!', { id: 'sync' });
                         if (pulled) window.location.reload();
                       }} 
                       disabled={!(settings?.supabaseUrl && settings?.supabaseKey)}
