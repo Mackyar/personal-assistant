@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Calendar, FileText, Clock, ChevronRight, Bot, Plus, Zap } from 'lucide-react';
+import { Calendar, FileText, Clock, ChevronRight, Plus, Search } from 'lucide-react';
 import { getTodayEvents, getUpcomingEvents, getUpcomingReminders } from '@/lib/db/events';
 import { getNotes } from '@/lib/db/notes';
 import { getSettings } from '@/lib/db/settings';
@@ -81,20 +81,26 @@ export default function DashboardPage() {
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-2xl font-bold gradient-text">Good {getGreeting()}, there!</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">{dateStr} · {timeStr}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">{dateStr} - {timeStr}</p>
             </div>
-            <Link href="/chat" className="btn-primary flex items-center gap-2 text-sm">
-              <Bot size={14} />
-              Ask AI
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/search" className="btn-ghost border border-border flex items-center gap-2 text-sm px-3 py-2 rounded-lg">
+                <Search size={14} />
+                <span className="hidden sm:inline">Search</span>
+              </Link>
+              <Link href="/chat" className="btn-primary flex items-center gap-2 text-sm">
+                <Calendar size={14} />
+                Ask AI
+              </Link>
+            </div>
           </div>
         </div>
 
         {/* AI Summary */}
         <div className="glass rounded-2xl p-4 border border-primary/20 fade-in">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center">
-              <Zap size={12} className="text-white" />
+            <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0ea5e9, #06b6d4)' }}>
+              <Calendar size={12} className="text-white" />
             </div>
             <span className="text-xs font-semibold text-primary uppercase tracking-wider">AI Daily Briefing</span>
           </div>
@@ -125,7 +131,7 @@ export default function DashboardPage() {
             addHref="/calendar"
           >
             {todayEvents.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-2">No events today — a free day! 🎉</p>
+              <p className="text-xs text-muted-foreground py-2">No events today, enjoy your free day! 🎉</p>
             ) : (
               <div className="space-y-2">
                 {todayEvents.map((e) => (
@@ -133,7 +139,7 @@ export default function DashboardPage() {
                     <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: e.color }} />
                     <div>
                       <p className="text-sm font-medium text-foreground">{e.title}</p>
-                      {e.startTime && <p className="text-xs text-muted-foreground">{formatTime(e.startTime)}{e.endTime ? ` – ${formatTime(e.endTime)}` : ''}</p>}
+                      {e.startTime && <p className="text-xs text-muted-foreground">{formatTime(e.startTime)}{e.endTime ? ` - ${formatTime(e.endTime)}` : ''}</p>}
                     </div>
                   </div>
                 ))}
@@ -222,8 +228,8 @@ export default function DashboardPage() {
             {[
               { label: 'New Note', icon: FileText, href: '/notes', color: 'text-green-400', bg: 'bg-green-400/10' },
               { label: 'Add Event', icon: Calendar, href: '/calendar', color: 'text-blue-400', bg: 'bg-blue-400/10' },
-              { label: 'Ask AI', icon: Bot, href: '/chat', color: 'text-primary', bg: 'bg-primary/10' },
-              { label: 'Search', icon: Clock, href: '/search', color: 'text-amber-400', bg: 'bg-amber-400/10' },
+              { label: 'Ask AI', icon: Calendar, href: '/chat', color: 'text-primary', bg: 'bg-primary/10' },
+              { label: 'Search', icon: Search, href: '/search', color: 'text-amber-400', bg: 'bg-amber-400/10' },
             ].map((a) => {
               const Icon = a.icon;
               return (

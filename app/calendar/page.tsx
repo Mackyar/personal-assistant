@@ -8,6 +8,7 @@ import interactionPlugin from '@fullcalendar/interaction';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { Plus, X, Trash2, Edit2, Upload } from 'lucide-react';
 import { getEvents, createEvent, updateEvent, deleteEvent } from '@/lib/db/events';
+import { getSettings as getAppSettings } from '@/lib/db/settings';
 import { formatTime, EVENT_COLORS } from '@/lib/utils';
 import type { CalendarEvent } from '@/lib/db/schema';
 import toast from 'react-hot-toast';
@@ -24,9 +25,10 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [modal, setModal] = useState<EventModalState>({ open: false, mode: 'create' });
   const [showImportModal, setShowImportModal] = useState(false);
+  const [firstDay, setFirstDay] = useState<0 | 1>(1);
   const calendarRef = useRef<FullCalendar>(null);
 
-  useEffect(() => { loadEvents(); }, []);
+  useEffect(() => { loadEvents(); getAppSettings().then(s => setFirstDay(s.weekStartsOn ?? 1)); }, []);
 
   async function loadEvents() {
     const all = await getEvents();
@@ -136,6 +138,7 @@ export default function CalendarPage() {
             dateClick={handleDateClick}
             eventClick={handleEventClick}
             height="100%"
+            firstDay={firstDay}
             eventTimeFormat={{ hour: 'numeric', minute: '2-digit', meridiem: 'short' }}
             dayMaxEvents={3}
           />

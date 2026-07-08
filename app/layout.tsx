@@ -9,15 +9,16 @@ import { Toaster } from 'react-hot-toast';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'Personal Assistant — Your AI Second Brain',
-  description: 'A local-first AI-powered personal assistant. Store notes, events, and ideas. Ask questions about your life.',
+  title: 'Yay Schedule - Personal Schedule',
+  description: 'Your personal schedule app. Manage your timetable, notes, and reminders all in one place.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Assistant',
+    title: 'Yay Schedule',
   },
   icons: {
+    icon: '/favicon.png',
     apple: '/icons/icon-192x192.png',
   },
 };

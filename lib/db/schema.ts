@@ -94,6 +94,7 @@ export interface AppSettings {
   ollamaBaseUrl: string;
   ollamaModel: string;
   theme: 'dark' | 'light' | 'system';
+  weekStartsOn: 0 | 1; // 0 = Sunday, 1 = Monday
   supabaseUrl?: string;
   supabaseKey?: string;
   updatedAt: number;
@@ -163,6 +164,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   ollamaBaseUrl: 'http://localhost:11434',
   ollamaModel: 'llama3',
   theme: 'dark',
+  weekStartsOn: 1, // Monday by default
   updatedAt: Date.now(),
 };
 

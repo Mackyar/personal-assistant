@@ -150,7 +150,7 @@ export default function ChatPage() {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card/50">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500 flex items-center justify-center">
             <Bot size={14} className="text-white" />
           </div>
           <div>
@@ -174,7 +174,7 @@ export default function ChatPage() {
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {isEmpty && (
           <div className="flex flex-col items-center justify-center h-full text-center pb-20 fade-in">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center mb-4 glow-primary">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-500 flex items-center justify-center mb-4 glow-primary">
               <Bot size={32} className="text-white" />
             </div>
             <h2 className="text-xl font-semibold gradient-text mb-2">What can I help you with?</h2>
@@ -203,7 +203,7 @@ export default function ChatPage() {
         {/* Streaming message */}
         {isStreaming && (
           <div className="flex gap-3 fade-in">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500 flex items-center justify-center flex-shrink-0 mt-0.5">
               <Bot size={13} className="text-white" />
             </div>
             <div className="message-assistant rounded-2xl rounded-tl-sm px-4 py-3 max-w-[80%]">
@@ -272,7 +272,7 @@ function MessageBubble({ message }: { message: Message }) {
     <div className={cn('flex gap-3 fade-in', isUser && 'flex-row-reverse')}>
       <div className={cn(
         'w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5',
-        isUser ? 'bg-primary' : 'bg-gradient-to-br from-violet-500 to-blue-500'
+        isUser ? 'bg-primary' : 'bg-gradient-to-br from-sky-500 to-cyan-500'
       )}>
         {isUser ? <User size={13} className="text-primary-foreground" /> : <Bot size={13} className="text-white" />}
       </div>

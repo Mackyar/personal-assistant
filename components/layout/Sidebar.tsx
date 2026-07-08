@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import {
-  MessageSquare, Calendar, FileText, Search, LayoutDashboard,
-  Settings, Plus, Bot, Trash2, ChevronRight, X, ListTodo
+  MessageSquare, Calendar, FileText, LayoutDashboard,
+  Settings, Plus, Trash2, ListTodo
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getConversations, createConversation, deleteConversation } from '@/lib/db/conversations';
@@ -17,7 +17,6 @@ const NAV_ITEMS = [
   { href: '/calendar', icon: Calendar, label: 'Calendar' },
   { href: '/notes', icon: FileText, label: 'Notes' },
   { href: '/reminders', icon: ListTodo, label: 'Reminders' },
-  { href: '/search', icon: Search, label: 'Search' },
 ];
 
 export function Sidebar() {
@@ -60,12 +59,12 @@ export function Sidebar() {
       {/* Logo */}
       <div className="px-4 py-5 border-b border-border">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center flex-shrink-0">
-            <Bot size={16} className="text-white" />
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #0ea5e9, #06b6d4)' }}>
+            <Calendar size={16} className="text-white" />
           </div>
           <div>
-            <h1 className="font-semibold text-sm text-foreground">Personal Assistant</h1>
-            <p className="text-xs text-muted-foreground">AI Second Brain</p>
+            <h1 className="font-semibold text-sm text-foreground">Yay Schedule</h1>
+            <p className="text-xs text-muted-foreground">Personal Schedule</p>
           </div>
         </div>
       </div>
