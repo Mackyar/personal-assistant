@@ -26,6 +26,7 @@ export default function CalendarPage() {
   const [modal, setModal] = useState<EventModalState>({ open: false, mode: 'create' });
   const [showImportModal, setShowImportModal] = useState(false);
   const [firstDay, setFirstDay] = useState<0 | 1>(1);
+  const [selectedRange, setSelectedRange] = useState<{ start: string, end: string } | null>(null);
   const calendarRef = useRef<FullCalendar>(null);
 
   useEffect(() => { loadEvents(); getAppSettings().then(s => setFirstDay(s.weekStartsOn ?? 1)); }, []);
@@ -58,8 +59,18 @@ export default function CalendarPage() {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function handleSelect(arg: any) {
+    setSelectedRange({ start: arg.startStr.slice(0, 10), end: arg.endStr.slice(0, 10) });
+  }
+
+  function handleUnselect() {
+    setSelectedRange(null);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function handleDateClick(arg: any) {
-    setModal({ open: true, mode: 'create', defaultDate: arg.dateStr.slice(0, 10) });
+    // If they just click a date, we could open the modal, but FullCalendar select will also fire.
+    // If they double click or just want to add, they can use the Add Event button.
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -89,25 +100,53 @@ export default function CalendarPage() {
     }
   }
 
+  async function handleDeleteSelected() {
+    if (!selectedRange) return;
+    const toDelete = events.filter(e => e.date >= selectedRange.start && e.date < selectedRange.end);
+    if (toDelete.length === 0) {
+      toast.error('No events found in selected range');
+      return;
+    }
+    
+    if (!confirm(`Are you sure you want to delete ${toDelete.length} event(s)?`)) return;
+
+    for (const e of toDelete) {
+      await deleteEvent(e.id);
+    }
+    toast.success(`Deleted ${toDelete.length} event(s)`);
+    setSelectedRange(null);
+    calendarRef.current?.getApi().unselect();
+    loadEvents();
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card/50">
         <h1 className="text-lg font-semibold">Calendar</h1>
         <div className="flex items-center gap-2">
+          {selectedRange && (
+            <button
+              onClick={handleDeleteSelected}
+              className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border border-destructive bg-destructive/10 text-destructive hover:bg-destructive/20 transition-all"
+            >
+              <Trash2 size={14} />
+              Delete Events
+            </button>
+          )}
           <button
             onClick={() => setShowImportModal(true)}
             className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border border-border bg-secondary hover:bg-secondary/80 text-foreground transition-all"
           >
             <Upload size={14} />
-            Import
+            <span className="hidden sm:inline">Import</span>
           </button>
           <button
-            onClick={() => setModal({ open: true, mode: 'create', defaultDate: new Date().toISOString().slice(0, 10) })}
+            onClick={() => setModal({ open: true, mode: 'create', defaultDate: selectedRange ? selectedRange.start : new Date().toISOString().slice(0, 10) })}
             className="btn-primary flex items-center gap-1.5 text-sm"
           >
             <Plus size={14} />
-            Add Event
+            <span className="hidden sm:inline">Add Event</span>
           </button>
         </div>
       </div>
@@ -135,6 +174,8 @@ export default function CalendarPage() {
             editable={true}
             selectable={true}
             eventDrop={handleEventDrop}
+            select={handleSelect}
+            unselect={handleUnselect}
             dateClick={handleDateClick}
             eventClick={handleEventClick}
             height="100%"

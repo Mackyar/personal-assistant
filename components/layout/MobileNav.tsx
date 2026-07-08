@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageSquare, Calendar, FileText, LayoutDashboard, ListTodo } from 'lucide-react';
+import { MessageSquare, Calendar, FileText, LayoutDashboard, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { href: '/chat', icon: MessageSquare, label: 'Chat' },
   { href: '/calendar', icon: Calendar, label: 'Calendar' },
   { href: '/notes', icon: FileText, label: 'Notes' },
-  { href: '/reminders', icon: ListTodo, label: 'Reminders' },
+  { href: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 export function MobileNav() {

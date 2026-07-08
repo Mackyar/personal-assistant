@@ -80,7 +80,7 @@ export default function DashboardPage() {
         <div className="fade-in">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-2xl font-bold gradient-text">Good {getGreeting()}, there!</h1>
+              <h1 className="text-2xl font-bold text-foreground">Good {getGreeting()}, there!</h1>
               <p className="text-sm text-muted-foreground mt-0.5">{dateStr} - {timeStr}</p>
             </div>
             <div className="flex items-center gap-2">

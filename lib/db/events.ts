@@ -56,13 +56,27 @@ export async function searchEventsByText(query: string): Promise<CalendarEvent[]
 }
 
 export async function getTodayEvents(): Promise<CalendarEvent[]> {
-  const today = new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const today = `${y}-${m}-${day}`;
   return db.events.where('date').equals(today).toArray();
 }
 
 export async function getUpcomingEvents(days = 7): Promise<CalendarEvent[]> {
-  const from = new Date().toISOString().slice(0, 10);
-  const to = new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const from = `${y}-${m}-${day}`;
+  
+  const toDate = new Date(d.getTime() + days * 86400000);
+  const toY = toDate.getFullYear();
+  const toM = String(toDate.getMonth() + 1).padStart(2, '0');
+  const toD = String(toDate.getDate()).padStart(2, '0');
+  const to = `${toY}-${toM}-${toD}`;
+  
   return getEvents({ from, to });
 }
 
