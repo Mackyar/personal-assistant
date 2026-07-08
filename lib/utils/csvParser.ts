@@ -59,18 +59,13 @@ export function parseTimetable(csvText: string, targetSection: string): ParsedCl
     // Update date if column 0 is present
     if (row[0] && row[0].trim() !== '') {
       try {
-        // CRITICAL FIX: Do NOT use new Date(string) - it parses as UTC midnight
-        // which causes an off-by-one error in IST (UTC+5:30).
-        // Instead, parse the date parts directly to get a local date string.
-        const raw = row[0].trim();
-        // Try "06 July 2026" or "July 06, 2026" style
-        // We manually extract year, month, day to avoid timezone issues
-        const dateParsed = new Date(raw);
+        // new Date("09 July 2026") parses as LOCAL midnight (00:00 IST = July 8 18:30 UTC).
+        // getUTCDate() would return 8 (wrong). We must use LOCAL date methods instead.
+        const dateParsed = new Date(row[0].trim());
         if (!isNaN(dateParsed.getTime())) {
-          // Use UTC values to avoid timezone offset
-          const y = dateParsed.getUTCFullYear();
-          const m = String(dateParsed.getUTCMonth() + 1).padStart(2, '0');
-          const d = String(dateParsed.getUTCDate()).padStart(2, '0');
+          const y = dateParsed.getFullYear();
+          const m = String(dateParsed.getMonth() + 1).padStart(2, '0');
+          const d = String(dateParsed.getDate()).padStart(2, '0');
           currentDate = `${y}-${m}-${d}`;
         }
       } catch {
