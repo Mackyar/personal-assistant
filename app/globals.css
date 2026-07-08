@@ -329,3 +329,23 @@ body {
 /* Line clamp utility */
 .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* FullCalendar Mobile Responsive Fixes */
+@media (max-width: 640px) {
+  .fc .fc-toolbar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center !important;
+  }
+  .fc .fc-toolbar-title {
+    font-size: 1.1rem !important;
+    text-align: center;
+    width: 100%;
+    order: -1; /* Push title to the top */
+    margin-bottom: 0.5rem;
+  }
+  .fc .fc-toolbar-chunk {
+    display: flex;
+    justify-content: center;
+  }
+}
