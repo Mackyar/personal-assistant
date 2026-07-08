@@ -178,6 +178,20 @@ export default function CalendarPage() {
             unselect={handleUnselect}
             dateClick={handleDateClick}
             eventClick={handleEventClick}
+            eventContent={(arg) => {
+              return (
+                <div className="flex flex-col w-full overflow-hidden leading-tight px-0.5">
+                  {arg.timeText && (
+                    <span className="text-[9px] sm:text-[10px] font-semibold truncate opacity-90">
+                      {arg.timeText}
+                    </span>
+                  )}
+                  <span className="text-[10px] sm:text-[11px] truncate font-medium">
+                    {arg.event.title}
+                  </span>
+                </div>
+              );
+            }}
             height="100%"
             firstDay={firstDay}
             eventTimeFormat={{ hour: 'numeric', minute: '2-digit', meridiem: 'short' }}

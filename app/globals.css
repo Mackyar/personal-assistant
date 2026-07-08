@@ -289,8 +289,9 @@ body {
   width: 100% !important;
 }
 .fc .fc-event-title {
-  white-space: normal !important;
-  word-wrap: break-word;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 .fc .fc-event {
   border-radius: 6px; 
