@@ -93,6 +93,7 @@ export interface AppSettings {
   openrouterModel: string;
   ollamaBaseUrl: string;
   ollamaModel: string;
+  llm7Key?: string;
   llm7Model: string;
   theme: 'dark' | 'light' | 'system';
   weekStartsOn: 0 | 1; // 0 = Sunday, 1 = Monday

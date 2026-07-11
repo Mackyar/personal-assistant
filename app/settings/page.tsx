@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import {
   Bot, Key, Eye, EyeOff, Check, RefreshCw, Download, AlertCircle,
-  Cloud, Wifi, WifiOff, Trash2, Calendar, ChevronDown, ChevronUp
+  Cloud, Wifi, WifiOff, Trash2, Calendar, ChevronDown, ChevronUp,
+  Database, Upload
 } from 'lucide-react';
 import { getSettings, saveSettings } from '@/lib/db/settings';
 import { OllamaProvider } from '@/lib/ai/providers/ollama';
@@ -87,17 +88,12 @@ const PROVIDERS = [
   },
   {
     id: 'llm7' as const,
-    label: 'LLM7.io (Free)',
+    label: 'LLM7.io',
     logo: '⚡',
-    needsKey: false,
-    keyPlaceholder: '',
+    needsKey: true,
+    keyPlaceholder: 'sk-...',
     docsUrl: 'https://llm7.io',
-    models: [
-      'gpt-5.4-mini', 'gpt-5.4', 'gpt-5.5', 'gpt-5.6-terra',
-      'claude-fable-5', 'claude-opus-4-8', 'claude-sonnet-5',
-      'codestral-latest', 'deepseek-v4-flash', 'devstral-small-2:24b',
-      'kimi-k2.6', 'minimax-m2.7'
-    ],
+    models: [],
     defaultModel: 'gpt-5.4-mini',
   },
 ];
@@ -109,6 +105,7 @@ const KEY_FIELDS: Record<string, keyof AppSettings> = {
   gemini: 'geminiKey',
   anthropic: 'anthropicKey',
   openrouter: 'openrouterKey',
+  llm7: 'llm7Key',
 };
 const MODEL_FIELDS: Record<string, keyof AppSettings> = {
   openai: 'openaiModel',
@@ -144,14 +141,59 @@ export default function SettingsPage() {
   async function checkOllama(baseUrl?: string) {
     setCheckingOllama(true);
     const url = baseUrl || 'http://localhost:11434';
-    const available = await OllamaProvider.isAvailable(url);
-    setOllamaStatus(available ? 'online' : 'offline');
-    if (available) {
-      const p = new OllamaProvider(url, '');
-      const models = await p.listModels();
-      setOllamaModels(models);
+    try {
+      const res = await fetch(`${url}/api/tags`);
+      if (res.ok) {
+        const data = await res.json();
+        setOllamaModels(data.models.map((m: any) => m.name));
+        setOllamaStatus('online');
+      } else {
+        setOllamaStatus('offline');
+      }
+    } catch {
+      setOllamaStatus('offline');
     }
     setCheckingOllama(false);
+  }
+
+  async function handleExportDB() {
+    try {
+      const { exportDB } = await import('dexie-export-import');
+      const blob = await exportDB(db, { prettyJson: true });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `yay-schedule-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Backup exported successfully');
+    } catch (e) {
+      toast.error('Failed to export backup');
+      console.error(e);
+    }
+  }
+
+  async function handleImportDB(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (!confirm('Warning: This will completely replace your current schedule and notes. Proceed?')) {
+      e.target.value = '';
+      return;
+    }
+    
+    try {
+      const { importDB } = await import('dexie-export-import');
+      await db.delete(); // Delete current database to ensure clean import
+      await db.open();
+      await importDB(file);
+      toast.success('Backup restored successfully! Reloading...');
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (err) {
+      toast.error('Failed to restore backup');
+      console.error(err);
+    }
+    e.target.value = '';
   }
 
   async function setActiveProvider(id: ProviderId) {
@@ -586,6 +628,29 @@ export default function SettingsPage() {
                   <option value={1}>Monday</option>
                   <option value={0}>Sunday</option>
                 </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Data Management */}
+          <div>
+            <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Database size={15} style={{ color: '#0ea5e9' }} />
+              Data Management
+            </h2>
+            <div className="bg-card border border-border rounded-2xl p-4">
+              <p className="text-sm font-medium text-foreground">Local Backup & Restore</p>
+              <p className="text-xs text-muted-foreground mt-0.5 mb-3">
+                Your data is stored locally on this device. If you use multiple devices, connecting to Supabase will sync them. Otherwise, you can manually backup your local data here.
+              </p>
+              <div className="flex gap-2">
+                <button onClick={handleExportDB} className="btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3">
+                  <Download size={13} /> Export Backup
+                </button>
+                <label className="btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3 cursor-pointer hover:bg-secondary/80 transition-colors rounded-xl border border-border bg-secondary text-foreground">
+                  <Upload size={13} /> Restore Backup
+                  <input type="file" accept=".json" className="hidden" onChange={handleImportDB} />
+                </label>
               </div>
             </div>
           </div>

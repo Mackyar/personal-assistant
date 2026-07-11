@@ -2,9 +2,11 @@ import type { AIProvider, AIMessage, StreamChunk, ToolDefinition } from '../clie
 
 // LLM7.io - free, no API key required. Routed through /api/llm7 proxy to avoid CORS.
 export class LLM7Provider implements AIProvider {
+  private apiKey: string;
   private model: string;
 
-  constructor(model = 'gpt-5.4-mini') {
+  constructor(apiKey: string, model = 'gpt-5.4-mini') {
+    this.apiKey = apiKey;
     this.model = model;
   }
 
@@ -21,7 +23,7 @@ export class LLM7Provider implements AIProvider {
     const res = await fetch('/api/llm7', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: this.model, messages }),
+      body: JSON.stringify({ apiKey: this.apiKey, model: this.model, messages }),
     });
 
     if (!res.ok) {
