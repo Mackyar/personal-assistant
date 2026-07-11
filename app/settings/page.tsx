@@ -85,6 +85,22 @@ const PROVIDERS = [
     models: [],
     defaultModel: 'llama3',
   },
+  {
+    id: 'llm7' as const,
+    label: 'LLM7.io (Free)',
+    logo: '⚡',
+    needsKey: false,
+    keyPlaceholder: '',
+    docsUrl: 'https://llm7.io',
+    models: [
+      'gpt-4.1-mini', 'gpt-4.1', 'gpt-4o', 'gpt-4o-mini',
+      'claude-3-7-sonnet', 'claude-3-5-sonnet-20241022',
+      'deepseek-v3-0324', 'deepseek-r1',
+      'gemini-2.5-flash', 'gemini-2.0-flash',
+      'llama-3.3-70b-instruct', 'mistral-large-2411',
+    ],
+    defaultModel: 'gpt-4.1-mini',
+  },
 ];
 
 type ProviderId = typeof PROVIDERS[number]['id'];
@@ -101,6 +117,7 @@ const MODEL_FIELDS: Record<string, keyof AppSettings> = {
   anthropic: 'anthropicModel',
   openrouter: 'openrouterModel',
   ollama: 'ollamaModel',
+  llm7: 'llm7Model',
 };
 
 export default function SettingsPage() {

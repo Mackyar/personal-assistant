@@ -81,7 +81,7 @@ export interface EmbeddingRecord {
 
 export interface AppSettings {
   id: string; // Always 'settings'
-  activeProvider: 'openai' | 'gemini' | 'anthropic' | 'openrouter' | 'ollama';
+  activeProvider: 'openai' | 'gemini' | 'anthropic' | 'openrouter' | 'ollama' | 'llm7';
   activeModel: string;
   openaiKey?: string;
   openaiModel: string;
@@ -93,6 +93,7 @@ export interface AppSettings {
   openrouterModel: string;
   ollamaBaseUrl: string;
   ollamaModel: string;
+  llm7Model: string;
   theme: 'dark' | 'light' | 'system';
   weekStartsOn: 0 | 1; // 0 = Sunday, 1 = Monday
   supabaseUrl?: string;
@@ -155,14 +156,15 @@ export const db = new PersonalAssistantDB();
 // Default settings
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'settings',
-  activeProvider: 'openai',
-  activeModel: 'gpt-4o-mini',
+  activeProvider: 'llm7',
+  activeModel: 'gpt-4.1-mini',
   openaiModel: 'gpt-4o-mini',
   geminiModel: 'gemini-1.5-flash',
   anthropicModel: 'claude-3-haiku-20240307',
   openrouterModel: 'openai/gpt-4o-mini',
   ollamaBaseUrl: 'http://localhost:11434',
   ollamaModel: 'llama3',
+  llm7Model: 'gpt-4.1-mini',
   theme: 'dark',
   weekStartsOn: 1, // Monday by default
   updatedAt: Date.now(),

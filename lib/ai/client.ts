@@ -40,6 +40,9 @@ export async function getAIProvider(settings: AppSettings): Promise<AIProvider> 
     case 'ollama':
       const { OllamaProvider } = await import('./providers/ollama');
       return new OllamaProvider(settings.ollamaBaseUrl, settings.ollamaModel);
+    case 'llm7':
+      const { LLM7Provider } = await import('./providers/llm7');
+      return new LLM7Provider(settings.llm7Model || 'gpt-4.1-mini');
     default:
       throw new Error(`Unknown provider: ${settings.activeProvider}`);
   }
@@ -52,6 +55,7 @@ export function hasRequiredKey(settings: AppSettings): boolean {
     case 'anthropic': return !!settings.anthropicKey;
     case 'openrouter': return !!settings.openrouterKey;
     case 'ollama': return true;
+    case 'llm7': return true; // No key required
     default: return false;
   }
 }

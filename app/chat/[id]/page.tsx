@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Send, Paperclip, Square, Bot, User, Plus, Zap } from 'lucide-react';
+import { Send, Paperclip, Square, Bot, User, Plus, Zap, CalendarPlus } from 'lucide-react';
 import { cn, formatRelativeDate } from '@/lib/utils';
 import { addMessage, getMessages, createConversation } from '@/lib/db/conversations';
 import { processChat } from '@/lib/ai/chat';
@@ -158,16 +158,25 @@ export default function ChatPage() {
             <p className="text-xs text-muted-foreground">Your personal second brain</p>
           </div>
         </div>
-        <button
-          onClick={async () => {
-            const conv = await createConversation();
-            router.push(`/chat/${conv.id}`);
-          }}
-          className="btn-ghost flex items-center gap-1.5 text-xs"
-        >
-          <Plus size={13} />
-          New chat
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => window.location.href = '/calendar'}
+            className="btn-ghost flex items-center gap-1.5 text-xs"
+          >
+            <CalendarPlus size={13} />
+            Add Event
+          </button>
+          <button
+            onClick={async () => {
+              const conv = await createConversation();
+              router.push(`/chat/${conv.id}`);
+            }}
+            className="btn-ghost flex items-center gap-1.5 text-xs"
+          >
+            <Plus size={13} />
+            New chat
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
