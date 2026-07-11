@@ -34,8 +34,11 @@ export default function DashboardPage() {
       getNotes({ limit: 5, isArchived: false }),
       getUpcomingReminders(7),
     ]);
-    setTodayEvents(te);
-    setUpcomingEvents(ue);
+    setTodayEvents(te.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || '')));
+    setUpcomingEvents(ue.sort((a, b) => {
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      return (a.startTime || '').localeCompare(b.startTime || '');
+    }));
     setRecentNotes(notes);
     setReminders(rems);
     setLoaded(true);

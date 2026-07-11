@@ -13,6 +13,7 @@ import { formatTime, EVENT_COLORS } from '@/lib/utils';
 import type { CalendarEvent } from '@/lib/db/schema';
 import toast from 'react-hot-toast';
 import { ImportModal } from './ImportModal';
+import { MobileMonthView } from './MobileMonthView';
 
 interface EventModalState {
   open: boolean;
@@ -27,9 +28,18 @@ export default function CalendarPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [firstDay, setFirstDay] = useState<0 | 1>(1);
   const [selectedRange, setSelectedRange] = useState<{ start: string, end: string } | null>(null);
+  const [mobileView, setMobileView] = useState<'month' | 'week' | 'day'>('month');
+  const [isMobile, setIsMobile] = useState(false);
   const calendarRef = useRef<FullCalendar>(null);
 
-  useEffect(() => { loadEvents(); getAppSettings().then(s => setFirstDay(s.weekStartsOn ?? 1)); }, []);
+  useEffect(() => {
+    loadEvents();
+    getAppSettings().then(s => setFirstDay(s.weekStartsOn ?? 1));
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   async function loadEvents() {
     const all = await getEvents();
@@ -125,6 +135,24 @@ export default function CalendarPage() {
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card/50">
         <h1 className="text-lg font-semibold">Calendar</h1>
         <div className="flex items-center gap-2">
+          {/* Mobile view switcher */}
+          {isMobile && (
+            <div className="flex rounded-xl border border-border overflow-hidden text-xs">
+              {(['month', 'week', 'day'] as const).map(v => (
+                <button
+                  key={v}
+                  onClick={() => setMobileView(v)}
+                  className={`px-2.5 py-1.5 capitalize transition-colors ${
+                    mobileView === v
+                      ? 'bg-primary text-primary-foreground font-semibold'
+                      : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
+                  }`}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          )}
           {selectedRange && (
             <button
               onClick={handleDeleteSelected}
@@ -141,57 +169,78 @@ export default function CalendarPage() {
             <Upload size={14} />
             <span className="hidden sm:inline">Import</span>
           </button>
-          <button
-            onClick={() => setModal({ open: true, mode: 'create', defaultDate: selectedRange ? selectedRange.start : new Date().toISOString().slice(0, 10) })}
-            className="btn-primary flex items-center gap-1.5 text-sm"
-          >
-            <Plus size={14} />
-            <span className="hidden sm:inline">Add Event</span>
-          </button>
+          {!isMobile && (
+            <button
+              onClick={() => setModal({ open: true, mode: 'create', defaultDate: selectedRange ? selectedRange.start : new Date().toISOString().slice(0, 10) })}
+              className="btn-primary flex items-center gap-1.5 text-sm"
+            >
+              <Plus size={14} />
+              Add Event
+            </button>
+          )}
         </div>
       </div>
 
       {showImportModal && (
-        <ImportModal 
-          onClose={() => setShowImportModal(false)} 
-          onImported={loadEvents} 
+        <ImportModal
+          onClose={() => setShowImportModal(false)}
+          onImported={loadEvents}
         />
       )}
 
-      {/* Calendar */}
-      <div className="flex-1 overflow-hidden px-4 py-4">
-        <div className="h-full [&_.fc]:h-full calendar-wrap">
-          <FullCalendar
-            ref={calendarRef}
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-            initialView="dayGridMonth"
-            headerToolbar={{
-              left: 'prev,next today',
-              center: 'title',
-              right: 'dayGridMonth,timeGridWeek,timeGridDay',
-            }}
-            events={toFCEvents(events)}
-            editable={true}
-            selectable={true}
-            eventDrop={handleEventDrop}
-            select={handleSelect}
-            unselect={handleUnselect}
-            dateClick={handleDateClick}
-            eventClick={handleEventClick}
-            height="100%"
+      {/* Mobile custom month view */}
+      {isMobile && mobileView === 'month' && (
+        <div className="flex-1 overflow-hidden">
+          <MobileMonthView
+            events={events}
             firstDay={firstDay}
-            eventTimeFormat={{ hour: 'numeric', minute: '2-digit', meridiem: 'short' }}
-            dayMaxEvents={3}
-            views={{
-              dayGridMonth: {
-                displayEventTime: false,
-                eventDisplay: 'block',
-                dayMaxEvents: 2,
-              }
-            }}
+            onAddEvent={(date) => setModal({ open: true, mode: 'create', defaultDate: date })}
+            onEventClick={(ev) => setModal({ open: true, mode: 'edit', event: ev })}
           />
         </div>
-      </div>
+      )}
+
+      {/* FullCalendar: desktop always, mobile only for week/day */}
+      {(!isMobile || mobileView !== 'month') && (
+        <div className="flex-1 overflow-hidden px-4 py-4">
+          <div className="h-full [&_.fc]:h-full calendar-wrap">
+            <FullCalendar
+              ref={calendarRef}
+              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+              initialView={isMobile ? (mobileView === 'week' ? 'timeGridWeek' : 'timeGridDay') : 'dayGridMonth'}
+              key={isMobile ? mobileView : 'desktop'}
+              headerToolbar={isMobile ? {
+                left: 'prev,next today',
+                center: 'title',
+                right: '',
+              } : {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay',
+              }}
+              events={toFCEvents(events)}
+              editable={true}
+              selectable={true}
+              eventDrop={handleEventDrop}
+              select={handleSelect}
+              unselect={handleUnselect}
+              dateClick={handleDateClick}
+              eventClick={handleEventClick}
+              height="100%"
+              firstDay={firstDay}
+              eventTimeFormat={{ hour: 'numeric', minute: '2-digit', meridiem: 'short' }}
+              dayMaxEvents={3}
+              views={{
+                dayGridMonth: {
+                  displayEventTime: false,
+                  eventDisplay: 'block',
+                  dayMaxEvents: 2,
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Event Modal */}
       {modal.open && (
