@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Bot, Key, Eye, EyeOff, Check, RefreshCw, Download, AlertCircle,
   Cloud, Wifi, WifiOff, Trash2, Calendar, ChevronDown, ChevronUp,
-  Database, Upload
+  Database, Upload, BookOpen, Shield, FileText
 } from 'lucide-react';
 import { getSettings, saveSettings } from '@/lib/db/settings';
 import { OllamaProvider } from '@/lib/ai/providers/ollama';
@@ -699,6 +700,24 @@ export default function SettingsPage() {
                     </a>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Documentation & Legal */}
+          <div className="bg-card border border-border rounded-2xl overflow-hidden">
+            <div className="p-4">
+              <h2 className="text-sm font-semibold text-foreground mb-4">Documentation & Legal</h2>
+              <div className="space-y-3">
+                <Link href="/manual" className="flex items-center gap-3 text-sm text-foreground hover:text-primary transition-colors">
+                  <BookOpen size={16} className="text-muted-foreground" /> User Manual
+                </Link>
+                <Link href="/privacy" className="flex items-center gap-3 text-sm text-foreground hover:text-primary transition-colors">
+                  <Shield size={16} className="text-muted-foreground" /> Privacy Policy
+                </Link>
+                <Link href="/terms" className="flex items-center gap-3 text-sm text-foreground hover:text-primary transition-colors">
+                  <FileText size={16} className="text-muted-foreground" /> Terms & Conditions
+                </Link>
               </div>
             </div>
           </div>
