@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Home' },
-  { href: '/chat', icon: MessageSquare, label: 'Chat' },
+  { href: '/chats', icon: MessageSquare, label: 'Chat' },
   { href: '/calendar', icon: Calendar, label: 'Calendar' },
   { href: '/notes', icon: FileText, label: 'Notes' },
   { href: '/settings', icon: Settings, label: 'Settings' },
@@ -21,7 +21,10 @@ export function MobileNav() {
       <div className="flex items-center justify-around px-2 py-2">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+          // Mark Chat as active for both /chat/* and /chats routes
+          const isActive = pathname === item.href
+            || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+            || (item.href === '/chats' && pathname.startsWith('/chat'));
           return (
             <Link
               key={item.href}

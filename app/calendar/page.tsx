@@ -29,7 +29,10 @@ export default function CalendarPage() {
   const [firstDay, setFirstDay] = useState<0 | 1>(1);
   const [selectedRange, setSelectedRange] = useState<{ start: string, end: string } | null>(null);
   const [mobileView, setMobileView] = useState<'month' | 'week' | 'day'>('month');
-  const [isMobile, setIsMobile] = useState(false);
+  // Initialize isMobile synchronously so the right component renders immediately
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  );
   const calendarRef = useRef<FullCalendar>(null);
 
   useEffect(() => {
@@ -141,7 +144,13 @@ export default function CalendarPage() {
               {(['month', 'week', 'day'] as const).map(v => (
                 <button
                   key={v}
-                  onClick={() => setMobileView(v)}
+                  onClick={() => {
+                    setMobileView(v);
+                    if (v !== 'month') {
+                      const fcView = v === 'week' ? 'timeGridWeek' : 'timeGridDay';
+                      calendarRef.current?.getApi().changeView(fcView);
+                    }
+                  }}
                   className={`px-2.5 py-1.5 capitalize transition-colors ${
                     mobileView === v
                       ? 'bg-primary text-primary-foreground font-semibold'
@@ -207,8 +216,7 @@ export default function CalendarPage() {
             <FullCalendar
               ref={calendarRef}
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-              initialView={isMobile ? (mobileView === 'week' ? 'timeGridWeek' : 'timeGridDay') : 'dayGridMonth'}
-              key={isMobile ? mobileView : 'desktop'}
+              initialView={isMobile ? 'timeGridWeek' : 'dayGridMonth'}
               headerToolbar={isMobile ? {
                 left: 'prev,next today',
                 center: 'title',

@@ -1,89 +1,56 @@
-import OpenAI from 'openai';
 import type { AIProvider, AIMessage, StreamChunk, ToolDefinition } from '../client';
 
-// LLM7.io is OpenAI-compatible: free, no auth needed, supports many models
+// LLM7.io - free, no API key required. Routed through /api/llm7 proxy to avoid CORS.
 export class LLM7Provider implements AIProvider {
-  private client: OpenAI;
   private model: string;
 
   constructor(model = 'gpt-4.1-mini') {
-    this.client = new OpenAI({
-      apiKey: 'not-required', // LLM7 does not require a key
-      baseURL: 'https://llm7.io/v1',
-      dangerouslyAllowBrowser: true,
-    });
     this.model = model;
   }
 
   async listModels(): Promise<string[]> {
-    try {
-      const res = await this.client.models.list();
-      return res.data.map(m => m.id);
-    } catch {
-      return ['gpt-4.1-mini', 'gpt-4.1', 'gpt-4o', 'claude-3-7-sonnet', 'deepseek-v3-0324', 'gemini-2.5-flash'];
-    }
+    return [
+      'gpt-4.1-mini', 'gpt-4.1', 'gpt-4o', 'gpt-4o-mini',
+      'claude-3-7-sonnet', 'claude-3-5-sonnet-20241022',
+      'deepseek-v3-0324', 'deepseek-r1',
+      'gemini-2.5-flash', 'gemini-2.0-flash',
+      'llama-3.3-70b-instruct', 'mistral-large-2411',
+    ];
   }
 
-  async chat(messages: AIMessage[], tools?: ToolDefinition[]): Promise<string> {
-    const res = await this.client.chat.completions.create({
-      model: this.model,
-      messages: messages as OpenAI.Chat.ChatCompletionMessageParam[],
-      tools: tools?.map((t) => ({
-        type: 'function' as const,
-        function: { name: t.name, description: t.description, parameters: t.parameters },
-      })),
+  private async callProxy(messages: AIMessage[]): Promise<string> {
+    const res = await fetch('/api/llm7', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: this.model, messages }),
     });
-    return res.choices[0]?.message?.content || '';
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || '';
+  }
+
+  async chat(messages: AIMessage[], _tools?: ToolDefinition[]): Promise<string> {
+    return this.callProxy(messages);
   }
 
   async stream(
     messages: AIMessage[],
-    tools?: ToolDefinition[],
+    _tools?: ToolDefinition[],
     onChunk?: (chunk: StreamChunk) => void
   ): Promise<string> {
-    const stream = await this.client.chat.completions.create({
-      model: this.model,
-      messages: messages as OpenAI.Chat.ChatCompletionMessageParam[],
-      stream: true,
-      tools: tools?.map((t) => ({
-        type: 'function' as const,
-        function: { name: t.name, description: t.description, parameters: t.parameters },
-      })),
-    });
-
-    let fullContent = '';
-    let toolCallBuffer: { name: string; args: string } | null = null;
-
-    for await (const chunk of stream) {
-      const delta = chunk.choices[0]?.delta;
-      if (delta?.content) {
-        fullContent += delta.content;
-        onChunk?.({ type: 'delta', content: delta.content });
-      }
-      if (delta?.tool_calls) {
-        for (const tc of delta.tool_calls) {
-          if (tc.function?.name) {
-            toolCallBuffer = { name: tc.function.name, args: tc.function.arguments || '' };
-          } else if (tc.function?.arguments && toolCallBuffer) {
-            toolCallBuffer.args += tc.function.arguments;
-          }
-        }
-      }
-      if (chunk.choices[0]?.finish_reason === 'tool_calls' && toolCallBuffer) {
-        try {
-          const args = JSON.parse(toolCallBuffer.args);
-          onChunk?.({ type: 'tool_call', toolName: toolCallBuffer.name, toolArgs: args });
-        } catch {}
-        toolCallBuffer = null;
-      }
-    }
-
+    // Proxy doesn't support streaming yet; use non-streaming and emit as single chunk
+    const content = await this.callProxy(messages);
+    onChunk?.({ type: 'delta', content });
     onChunk?.({ type: 'done' });
-    return fullContent;
+    return content;
   }
 
   async embed(_text: string): Promise<number[]> {
-    // LLM7 does not have an embeddings endpoint; return empty
     return [];
   }
 }
