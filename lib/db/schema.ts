@@ -157,14 +157,14 @@ export const db = new PersonalAssistantDB();
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'settings',
   activeProvider: 'llm7',
-  activeModel: 'gpt-4.1-mini',
+  activeModel: 'gpt-5.4-mini',
   openaiModel: 'gpt-4o-mini',
   geminiModel: 'gemini-1.5-flash',
   anthropicModel: 'claude-3-haiku-20240307',
   openrouterModel: 'openai/gpt-4o-mini',
   ollamaBaseUrl: 'http://localhost:11434',
   ollamaModel: 'llama3',
-  llm7Model: 'gpt-4.1-mini',
+  llm7Model: 'gpt-5.4-mini',
   theme: 'dark',
   weekStartsOn: 1, // Monday by default
   updatedAt: Date.now(),

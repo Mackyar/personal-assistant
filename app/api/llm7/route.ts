@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { model = 'gpt-4.1-mini', messages, stream = false } = body;
+    const { model = 'gpt-5.4-mini', messages, stream = false } = body;
 
-    const response = await fetch('https://llm7.io/v1/chat/completions', {
+    const response = await fetch('https://api.llm7.io/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

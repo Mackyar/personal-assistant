@@ -93,13 +93,12 @@ const PROVIDERS = [
     keyPlaceholder: '',
     docsUrl: 'https://llm7.io',
     models: [
-      'gpt-4.1-mini', 'gpt-4.1', 'gpt-4o', 'gpt-4o-mini',
-      'claude-3-7-sonnet', 'claude-3-5-sonnet-20241022',
-      'deepseek-v3-0324', 'deepseek-r1',
-      'gemini-2.5-flash', 'gemini-2.0-flash',
-      'llama-3.3-70b-instruct', 'mistral-large-2411',
+      'gpt-5.4-mini', 'gpt-5.4', 'gpt-5.5', 'gpt-5.6-terra',
+      'claude-fable-5', 'claude-opus-4-8', 'claude-sonnet-5',
+      'codestral-latest', 'deepseek-v4-flash', 'devstral-small-2:24b',
+      'kimi-k2.6', 'minimax-m2.7'
     ],
-    defaultModel: 'gpt-4.1-mini',
+    defaultModel: 'gpt-5.4-mini',
   },
 ];
 
