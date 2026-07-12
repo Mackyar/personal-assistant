@@ -101,6 +101,66 @@ export default function NotesPage() {
           </button>
         </div>
 
+        {/* Mobile Folder Selector / Tabs */}
+        <div className="flex sm:hidden overflow-x-auto gap-1.5 px-4 py-2 border-b border-border bg-card/20 scrollbar-none whitespace-nowrap">
+          {[
+            { id: 'all', label: 'All', icon: FileText },
+            { id: 'pinned', label: 'Pinned', icon: Pin },
+          ].map((f) => {
+            const isActive = activeFolder === f.id && !showArchived;
+            return (
+              <button
+                key={f.id}
+                onClick={() => {
+                  setActiveFolder(f.id);
+                  setShowArchived(false);
+                }}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all border border-border',
+                  isActive ? 'bg-primary/10 border-primary/30 text-primary font-medium' : 'bg-secondary/40 text-muted-foreground'
+                )}
+              >
+                <f.icon size={12} />
+                {f.label}
+              </button>
+            );
+          })}
+
+          {folders.map((f) => {
+            const isActive = activeFolder === f && !showArchived;
+            return (
+              <button
+                key={f}
+                onClick={() => {
+                  setActiveFolder(f);
+                  setShowArchived(false);
+                }}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all border border-border',
+                  isActive ? 'bg-primary/10 border-primary/30 text-primary font-medium' : 'bg-secondary/40 text-muted-foreground'
+                )}
+              >
+                <Folder size={12} />
+                {f}
+              </button>
+            );
+          })}
+
+          <button
+            onClick={() => {
+              setShowArchived(!showArchived);
+              setActiveFolder('all');
+            }}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all border border-border',
+              showArchived ? 'bg-primary/10 border-primary/30 text-primary font-medium' : 'bg-secondary/40 text-muted-foreground'
+            )}
+          >
+            <Archive size={12} />
+            Archived
+          </button>
+        </div>
+
         {/* Search */}
         <div className="px-4 py-3 border-b border-border">
           <div className="relative">

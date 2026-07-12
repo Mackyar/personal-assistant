@@ -566,22 +566,45 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="pt-2 space-y-2">
-                    <button 
-                      onClick={async () => {
-                        const { pullSync, forcePushSync } = await import('@/lib/db/sync');
-                        const toast = (await import('react-hot-toast')).default;
-                        toast.loading('Syncing...', { id: 'sync' });
-                        // MUST pull first so we don't overwrite remote changes!
-                        const pulled = await pullSync();
-                        await forcePushSync();
-                        toast.success('Sync complete!', { id: 'sync' });
-                        if (pulled) window.location.reload();
-                      }} 
-                      disabled={!(settings?.supabaseUrl && settings?.supabaseKey)}
-                      className="btn-primary w-full text-xs flex justify-center items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white border-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <RefreshCw size={12} /> Force Sync Now
-                    </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button 
+                        onClick={async () => {
+                          const { forcePushSync } = await import('@/lib/db/sync');
+                          const toast = (await import('react-hot-toast')).default;
+                          toast.loading('Pushing to cloud...', { id: 'sync' });
+                          const success = await forcePushSync();
+                          if (success) {
+                            toast.success('Pushed successfully!', { id: 'sync' });
+                          } else {
+                            toast.error('Failed to push', { id: 'sync' });
+                          }
+                        }} 
+                        disabled={!(settings?.supabaseUrl && settings?.supabaseKey)}
+                        className="btn-primary text-xs flex justify-center items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white border-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Upload size={12} /> Push to Cloud
+                      </button>
+
+                      <button 
+                        onClick={async () => {
+                          if (!confirm('Warning: This will completely replace your local schedule, notes, and chats with the cloud version. Proceed?')) return;
+                          const { pullSyncOverwrite } = await import('@/lib/db/sync');
+                          const toast = (await import('react-hot-toast')).default;
+                          toast.loading('Pulling from cloud...', { id: 'sync' });
+                          const success = await pullSyncOverwrite();
+                          if (success) {
+                            toast.success('Pulled successfully! Reloading...', { id: 'sync' });
+                            setTimeout(() => window.location.reload(), 1500);
+                          } else {
+                            toast.error('Failed to pull or no cloud data', { id: 'sync' });
+                          }
+                        }} 
+                        disabled={!(settings?.supabaseUrl && settings?.supabaseKey)}
+                        className="btn-primary text-xs flex justify-center items-center gap-1.5 bg-indigo-500 hover:bg-indigo-600 text-white border-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Download size={12} /> Pull from Cloud
+                      </button>
+                    </div>
 
                     <button 
                       onClick={() => {

@@ -131,6 +131,66 @@ export async function pullSync(): Promise<boolean> {
   return false;
 }
 
+export async function pullSyncOverwrite(): Promise<boolean> {
+  try {
+    const supabase = await getSupabaseClient();
+    if (!supabase) return false;
+
+    const { data, error } = await supabase
+      .from('sync_state')
+      .select('data')
+      .eq('id', 'user_1')
+      .single();
+
+    if (error || !data || !data.data) {
+      return false;
+    }
+
+    const remoteData = data.data as SyncPayload;
+    const localSettings = await db.settings.get('app_settings');
+
+    const overwriteTable = async (tableName: string, items: any[]) => {
+      const table = (db as any)[tableName];
+      if (!table) return;
+      await table.clear();
+      if (items && items.length > 0) {
+        await table.bulkPut(items);
+      }
+    };
+
+    await Promise.all([
+      overwriteTable('notes', remoteData.notes),
+      overwriteTable('events', remoteData.events),
+      overwriteTable('reminders', remoteData.reminders),
+      overwriteTable('conversations', remoteData.conversations),
+      overwriteTable('messages', remoteData.messages),
+      overwriteTable('settings', remoteData.settings),
+    ]);
+
+    if (localSettings) {
+      const remoteSettings = await db.settings.get('app_settings');
+      await db.settings.put({
+        ...remoteSettings,
+        id: 'app_settings',
+        supabaseUrl: localSettings.supabaseUrl,
+        supabaseKey: localSettings.supabaseKey,
+        openaiKey: localSettings.openaiKey || remoteSettings?.openaiKey,
+        geminiKey: localSettings.geminiKey || remoteSettings?.geminiKey,
+        anthropicKey: localSettings.anthropicKey || remoteSettings?.anthropicKey,
+        openrouterKey: localSettings.openrouterKey || remoteSettings?.openrouterKey,
+        llm7Key: localSettings.llm7Key || remoteSettings?.llm7Key,
+        updatedAt: remoteSettings?.updatedAt || localSettings.updatedAt || Date.now(),
+      } as any);
+    }
+
+    localStorage.setItem('last_sync_pull', new Date().toISOString());
+    return true;
+  } catch (err) {
+    console.error('Pull overwrite failed:', err);
+    return false;
+  }
+}
+
 // Setup DB hooks to trigger pushSync automatically
 db.on('ready', () => {
   ['notes', 'events', 'reminders', 'conversations', 'messages', 'settings'].forEach((tableName) => {
