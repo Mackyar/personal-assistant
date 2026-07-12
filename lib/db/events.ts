@@ -4,12 +4,33 @@ import { v4 as uuidv4 } from '../utils';
 // ─── Events ───────────────────────────────────────────────────────────────────
 
 export async function createEvent(data: Partial<CalendarEvent>): Promise<CalendarEvent> {
+  const eventTitle = data.title || 'Untitled Event';
+  const eventDate = data.date || new Date().toISOString().slice(0, 10);
+  const eventDesc = data.description || '';
+  const eventLoc = data.location || '';
+
+  const existing = await db.events
+    .filter((e) => 
+      e.title === eventTitle &&
+      e.date === eventDate &&
+      (e.startTime || undefined) === (data.startTime || undefined) &&
+      (e.endTime || undefined) === (data.endTime || undefined) &&
+      e.description === eventDesc &&
+      e.location === eventLoc
+    )
+    .first();
+
+  if (existing) {
+    console.log('Duplicate event detected, skipping creation:', existing);
+    return existing;
+  }
+
   const event: CalendarEvent = {
     id: data.id || uuidv4(),
-    title: data.title || 'Untitled Event',
-    description: data.description || '',
-    location: data.location || '',
-    date: data.date || new Date().toISOString().slice(0, 10),
+    title: eventTitle,
+    description: eventDesc,
+    location: eventLoc,
+    date: eventDate,
     startTime: data.startTime,
     endTime: data.endTime,
     allDay: data.allDay ?? !data.startTime,
@@ -83,11 +104,29 @@ export async function getUpcomingEvents(days = 7): Promise<CalendarEvent[]> {
 // ─── Reminders ────────────────────────────────────────────────────────────────
 
 export async function createReminder(data: Partial<Reminder>): Promise<Reminder> {
+  const reminderTitle = data.title || 'Untitled Reminder';
+  const reminderDueDate = data.dueDate || new Date().toISOString().slice(0, 10);
+  const reminderDesc = data.description || '';
+
+  const existing = await db.reminders
+    .filter((r) => 
+      r.title === reminderTitle &&
+      r.dueDate === reminderDueDate &&
+      (r.dueTime || undefined) === (data.dueTime || undefined) &&
+      r.description === reminderDesc
+    )
+    .first();
+
+  if (existing) {
+    console.log('Duplicate reminder detected, skipping creation:', existing);
+    return existing;
+  }
+
   const reminder: Reminder = {
     id: data.id || uuidv4(),
-    title: data.title || 'Untitled Reminder',
-    description: data.description || '',
-    dueDate: data.dueDate || new Date().toISOString().slice(0, 10),
+    title: reminderTitle,
+    description: reminderDesc,
+    dueDate: reminderDueDate,
     dueTime: data.dueTime,
     isCompleted: data.isCompleted || false,
     tags: data.tags || [],

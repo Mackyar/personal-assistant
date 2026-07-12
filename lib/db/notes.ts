@@ -2,11 +2,26 @@ import { db, type Note } from './schema';
 import { v4 as uuidv4 } from '../utils';
 
 export async function createNote(data: Partial<Note>): Promise<Note> {
+  const noteTitle = data.title || 'Untitled Note';
+  const noteContentText = data.contentText || '';
+
+  const existing = await db.notes
+    .filter((n) => 
+      n.title === noteTitle &&
+      n.contentText === noteContentText
+    )
+    .first();
+
+  if (existing) {
+    console.log('Duplicate note detected, skipping creation:', existing);
+    return existing;
+  }
+
   const note: Note = {
     id: data.id || uuidv4(),
-    title: data.title || 'Untitled Note',
+    title: noteTitle,
     content: data.content || '{"type":"doc","content":[]}',
-    contentText: data.contentText || '',
+    contentText: noteContentText,
     tags: data.tags || [],
     folder: data.folder || 'root',
     isPinned: data.isPinned || false,

@@ -34,6 +34,7 @@ export default function CalendarPage() {
     typeof window !== 'undefined' ? window.innerWidth < 768 : false
   );
   const calendarRef = useRef<FullCalendar>(null);
+  const unselectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadEvents();
@@ -41,7 +42,10 @@ export default function CalendarPage() {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      if (unselectTimeoutRef.current) clearTimeout(unselectTimeoutRef.current);
+    };
   }, []);
 
   async function loadEvents() {
@@ -73,11 +77,18 @@ export default function CalendarPage() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function handleSelect(arg: any) {
+    if (unselectTimeoutRef.current) {
+      clearTimeout(unselectTimeoutRef.current);
+      unselectTimeoutRef.current = null;
+    }
     setSelectedRange({ start: arg.startStr.slice(0, 10), end: arg.endStr.slice(0, 10) });
   }
 
   function handleUnselect() {
-    setSelectedRange(null);
+    if (unselectTimeoutRef.current) clearTimeout(unselectTimeoutRef.current);
+    unselectTimeoutRef.current = setTimeout(() => {
+      setSelectedRange(null);
+    }, 200);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
