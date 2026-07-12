@@ -78,6 +78,7 @@ export async function forcePushSync() {
       updated_at: new Date().toISOString()
     });
     localStorage.setItem('last_sync_push', new Date().toISOString());
+    localStorage.setItem('last_sync_pull', new Date().toISOString()); // Mark synced
     return true;
   } catch (err) {
     console.error('Push sync failed:', err);
@@ -86,6 +87,13 @@ export async function forcePushSync() {
 }
 
 export function pushSync() {
+  // Prevent empty/new devices from automatically overwriting Supabase data.
+  // We only allow automatic background push if we have pulled at least once.
+  if (typeof window !== 'undefined' && !localStorage.getItem('last_sync_pull')) {
+    console.log('Skipping automatic push sync: last_sync_pull is not set');
+    return;
+  }
+
   if (syncTimeout) clearTimeout(syncTimeout);
   syncTimeout = setTimeout(() => {
     forcePushSync();
@@ -105,21 +113,36 @@ export async function pullSync(): Promise<boolean> {
     const { data, error } = await supabase
       .from('sync_state')
       .select('data, updated_at')
-      .eq('id', 'user_1')
-      .single();
+      .eq('id', 'user_1');
 
-    if (error || !data || !data.data) {
+    if (error) {
+      console.error('Pull sync fetch error:', error);
+      isSyncing = false;
+      return false;
+    }
+
+    if (!data || data.length === 0) {
+      // Server has no sync state yet. Set last_sync_pull to allow subsequent pushes.
+      if (typeof window !== 'undefined' && !localStorage.getItem('last_sync_pull')) {
+        localStorage.setItem('last_sync_pull', new Date().toISOString());
+      }
+      isSyncing = false;
+      return false;
+    }
+
+    const remoteRecord = data[0];
+    if (!remoteRecord || !remoteRecord.data) {
       isSyncing = false;
       return false;
     }
 
     const lastSyncStr = localStorage.getItem('last_sync_pull');
-    const remoteTime = new Date(data.updated_at).getTime();
+    const remoteTime = new Date(remoteRecord.updated_at).getTime();
     const localTime = lastSyncStr ? new Date(lastSyncStr).getTime() : 0;
 
-    // Optional: Only merge if remote is newer, but merging checks timestamps per item anyway.
+    // Only merge if remote is newer, or if we haven't successfully synced yet
     if (remoteTime > localTime || !lastSyncStr) {
-      await mergeDb(data.data as SyncPayload);
+      await mergeDb(remoteRecord.data as SyncPayload);
       localStorage.setItem('last_sync_pull', new Date().toISOString());
       isSyncing = false;
       return true; // Changes were pulled
