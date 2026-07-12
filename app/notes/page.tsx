@@ -250,7 +250,7 @@ function NoteCard({ note, onRefresh }: { note: Note; onRefresh: () => void }) {
         </div>
       </div>
       {note.contentText && note.contentText.trim() && (
-        <p className="text-xs text-muted-foreground leading-relaxed mb-2 line-clamp-3 whitespace-pre-line">{truncate(note.contentText.trim(), 120)}</p>
+        <p className="text-xs text-muted-foreground leading-relaxed mb-2 whitespace-pre-line">{note.contentText.trim()}</p>
       )}
       <div className="flex items-center justify-between">
         <div className="flex flex-wrap gap-1">
