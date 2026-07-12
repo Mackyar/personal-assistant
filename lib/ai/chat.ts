@@ -96,6 +96,7 @@ export async function processChat(
   const lowerMsg = cleanMsg.toLowerCase();
   const isReminderCmd = lowerMsg.startsWith('/reminder');
   const isNoteCmd = lowerMsg.startsWith('/note');
+  const isEventCmd = lowerMsg.startsWith('/event');
 
   let provider: any;
   let hasProvider = false;
@@ -109,7 +110,7 @@ export async function processChat(
   }
 
   // If not a command and we don't have a provider, show the warning
-  if (!isReminderCmd && !isNoteCmd && !hasProvider) {
+  if (!isReminderCmd && !isNoteCmd && !isEventCmd && !hasProvider) {
     const msg = settings.activeProvider === 'ollama'
       ? '⚠️ Ollama is selected but may not be running. Please start Ollama or switch to a cloud provider in Settings.'
       : '⚠️ No API key configured. Please go to **Settings** and add your API key to get started.';
@@ -137,12 +138,12 @@ export async function processChat(
     
     if (hasProvider && provider) {
       try {
-        const prompt = `Extract the reminder details from this text: "${cmdText}"
+        const prompt = `Extract the reminder details from this text, correcting any spelling, capitalization, and grammar to make it clean, correct, and professional: "${cmdText}"
 Today's date: ${new Date().toISOString().slice(0, 10)}
 Tomorrow's date: ${new Date(Date.now() + 86400000).toISOString().slice(0, 10)}
 
 Respond with ONLY a valid JSON object in this format:
-{"title":"<title>","description":"<description>","dueDate":"<YYYY-MM-DD>","dueTime":"<HH:MM or null>","tags":["<tag1>"]}
+{"title":"<clean, grammar-corrected title>","description":"<clean, grammar-corrected description>","dueDate":"<YYYY-MM-DD>","dueTime":"<HH:MM or null>","tags":["<tag1>"]}
 
 Rules:
 - "tomorrow" = ${new Date(Date.now() + 86400000).toISOString().slice(0, 10)}
@@ -177,10 +178,10 @@ Rules:
 
     if (hasProvider && provider) {
       try {
-        const prompt = `Extract note details from this text: "${cmdText}"
+        const prompt = `Extract note details from this text, correcting any spelling, capitalization, and grammar to make the title and content clean, correct, and professional: "${cmdText}"
 
 Respond with ONLY a valid JSON object in this format:
-{"title":"<title>","content":"<content>","tags":["<tag1>"],"folder":"root"}`;
+{"title":"<clean, grammar-corrected title>","content":"<clean, grammar-corrected content>","tags":["<tag1>"],"folder":"root"}`;
         const response = await provider.chat([{ role: 'user', content: prompt }]);
         const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
         const parsed = JSON.parse(cleaned);
@@ -194,6 +195,50 @@ Respond with ONLY a valid JSON object in this format:
         }
       } catch (e) {
         console.error('Failed to parse note via AI, using fallback:', e);
+      }
+    }
+  } else if (isEventCmd) {
+    intentAction = 'create_event';
+    const cmdText = cleanMsg.slice(cleanMsg.toLowerCase().indexOf('/event') + 6).trim();
+    // Default values if AI extraction fails/offline
+    intentArgs = {
+      title: cmdText || 'New Event',
+      date: new Date().toISOString().slice(0, 10),
+      description: '',
+      tags: [],
+      allDay: true,
+    };
+
+    if (hasProvider && provider) {
+      try {
+        const prompt = `Extract the event details from this text, correcting any spelling, capitalization, and grammar to make the title and description clean, correct, and professional: "${cmdText}"
+Today's date: ${new Date().toISOString().slice(0, 10)}
+Tomorrow's date: ${new Date(Date.now() + 86400000).toISOString().slice(0, 10)}
+
+Respond with ONLY a valid JSON object in this format:
+{"title":"<clean, grammar-corrected title>","description":"<clean, grammar-corrected description>","date":"<YYYY-MM-DD>","startTime":"<HH:MM or null>","endTime":"<HH:MM or null>","allDay":<true/false>,"location":"<location>","tags":["<tag1>"]}
+
+Rules:
+- "tomorrow" = ${new Date(Date.now() + 86400000).toISOString().slice(0, 10)}
+- "today" = ${new Date().toISOString().slice(0, 10)}
+- Extract time from natural language (e.g. "9:30 am" = "09:30", "3pm" = "15:00")`;
+        const response = await provider.chat([{ role: 'user', content: prompt }]);
+        const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        if (parsed.title) {
+          intentArgs = {
+            title: parsed.title,
+            date: parsed.date || intentArgs.date,
+            startTime: parsed.startTime || undefined,
+            endTime: parsed.endTime || undefined,
+            allDay: parsed.allDay ?? !parsed.startTime,
+            description: parsed.description || '',
+            location: parsed.location || '',
+            tags: parsed.tags || [],
+          };
+        }
+      } catch (e) {
+        console.error('Failed to parse event via AI, using fallback:', e);
       }
     }
   } else if (hasProvider && provider) {
@@ -250,6 +295,9 @@ Respond with ONLY a valid JSON object in this format:
       fullContent = `⏰ I've set a reminder: **${intentArgs.title}** by ${intentArgs.dueDate}.`;
     } else if (intentAction === 'create_note') {
       fullContent = `📝 I've saved a new note: **${intentArgs.title}**.`;
+    } else if (intentAction === 'create_event') {
+      const timeStr = intentArgs.startTime ? ` at ${intentArgs.startTime}` : '';
+      fullContent = `📅 I've created an event: **${intentArgs.title}** on ${intentArgs.date}${timeStr}.`;
     } else {
       fullContent = `⚠️ AI assistant is currently offline. Please configure your provider in Settings.`;
     }
