@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Pin, Archive, Tag, Folder, FileText, MoreHorizontal } from 'lucide-react';
-import { getNotes, createNote } from '@/lib/db/notes';
+import { Plus, Search, Pin, Archive, Tag, Folder, FileText, MoreHorizontal, Trash2 } from 'lucide-react';
+import { getNotes, createNote, deleteNote } from '@/lib/db/notes';
 import { db } from '@/lib/db/schema';
 import { formatRelativeDate, cn, truncate } from '@/lib/utils';
 import type { Note } from '@/lib/db/schema';
@@ -109,7 +109,7 @@ export default function NotesPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search notes..."
-              className="w-full pl-9 input-base text-xs"
+              className="w-full !pl-9 input-base text-xs"
             />
           </div>
         </div>
@@ -161,6 +161,15 @@ function NoteCard({ note, onRefresh }: { note: Note; onRefresh: () => void }) {
     toast.success(note.isArchived ? 'Note unarchived' : 'Note archived');
   }
 
+  async function handleDelete(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this note?')) return;
+    await deleteNote(note.id);
+    onRefresh();
+    toast.success('Note deleted');
+  }
+
   return (
     <Link
       href={`/notes/${note.id}`}
@@ -168,12 +177,15 @@ function NoteCard({ note, onRefresh }: { note: Note; onRefresh: () => void }) {
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <h3 className="font-medium text-sm text-foreground group-hover:text-primary transition-colors truncate">{note.title}</h3>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+        <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex-shrink-0">
           <button onClick={togglePin} className={cn('p-1 rounded hover:bg-secondary transition-all', note.isPinned && 'text-amber-400')}>
             <Pin size={11} />
           </button>
           <button onClick={toggleArchive} className="p-1 rounded hover:bg-secondary transition-all text-muted-foreground">
             <Archive size={11} />
+          </button>
+          <button onClick={handleDelete} className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-all text-muted-foreground">
+            <Trash2 size={11} />
           </button>
         </div>
       </div>
