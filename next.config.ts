@@ -34,7 +34,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
-      "connect-src 'self' https://*.supabase.co https://api.llm7.io https://api.openai.com https://generativelanguage.googleapis.com https://openrouter.ai https://api.anthropic.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://api.llm7.io https://api.openai.com https://openrouter.ai https://api.anthropic.com",
       "worker-src 'self' blob:",
       "frame-ancestors 'none'", // Stronger clickjacking protection
     ].join('; '),
