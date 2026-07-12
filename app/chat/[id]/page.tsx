@@ -248,7 +248,7 @@ export default function ChatPage() {
           <div className="flex items-center justify-between mt-2">
             <div className="flex items-center gap-1">
               <span className="text-xs text-muted-foreground">
-                {isStreaming ? 'Generating...' : 'Shift+Enter for new line'}
+                {isStreaming ? 'Generating...' : '💡 Try /note, /reminder, or /event (works offline without AI!)'}
               </span>
             </div>
             <div className="flex items-center gap-2">

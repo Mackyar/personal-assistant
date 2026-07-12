@@ -1,6 +1,99 @@
 import { type AIMessage, getAIProvider, hasRequiredKey } from './client';
 import { executeTool, type ToolResult } from './tools';
 import { getSettings } from '../db/settings';
+import * as chrono from 'chrono-node';
+import nlp from 'compromise';
+
+// ─── Local NLP Parsing Helpers ──────────────────────────────────────────────────
+
+function cleanGrammar(text: string): string {
+  if (!text) return '';
+  try {
+    let doc = nlp(text);
+    doc.normalize();
+    let result = doc.text().trim();
+    if (result.length > 0) {
+      result = result.charAt(0).toUpperCase() + result.slice(1);
+    }
+    return result;
+  } catch (e) {
+    console.error('Compromise cleaner failed:', e);
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+}
+
+function parseLocalReminder(text: string): { title: string; dueDate: string; dueTime?: string } {
+  try {
+    const parsed = chrono.parse(text);
+    let title = text;
+    let dueDate = new Date().toISOString().slice(0, 10);
+    let dueTime: string | undefined;
+
+    if (parsed.length > 0) {
+      const match = parsed[0];
+      title = text.replace(match.text, '').replace(/\s+/g, ' ').trim();
+      const dateObj = match.start.date();
+      dueDate = dateObj.toISOString().slice(0, 10);
+      
+      if (match.start.isCertain('hour')) {
+        const h = String(dateObj.getHours()).padStart(2, '0');
+        const m = String(dateObj.getMinutes()).padStart(2, '0');
+        dueTime = `${h}:${m}`;
+      }
+    }
+
+    title = cleanGrammar(title) || 'New Reminder';
+    return { title, dueDate, dueTime };
+  } catch (e) {
+    console.error('Chrono reminder parser failed:', e);
+    return {
+      title: cleanGrammar(text) || 'New Reminder',
+      dueDate: new Date().toISOString().slice(0, 10)
+    };
+  }
+}
+
+function parseLocalEvent(text: string): { title: string; date: string; startTime?: string; endTime?: string; allDay: boolean } {
+  try {
+    const parsed = chrono.parse(text);
+    let title = text;
+    let date = new Date().toISOString().slice(0, 10);
+    let startTime: string | undefined;
+    let endTime: string | undefined;
+    let allDay = true;
+
+    if (parsed.length > 0) {
+      const match = parsed[0];
+      title = text.replace(match.text, '').replace(/\s+/g, ' ').trim();
+      const dateObj = match.start.date();
+      date = dateObj.toISOString().slice(0, 10);
+      
+      if (match.start.isCertain('hour')) {
+        allDay = false;
+        const h = String(dateObj.getHours()).padStart(2, '0');
+        const m = String(dateObj.getMinutes()).padStart(2, '0');
+        startTime = `${h}:${m}`;
+        
+        if (match.end && match.end.isCertain('hour')) {
+          const endDateObj = match.end.date();
+          const eh = String(endDateObj.getHours()).padStart(2, '0');
+          const em = String(endDateObj.getMinutes()).padStart(2, '0');
+          endTime = `${eh}:${em}`;
+        }
+      }
+    }
+
+    title = cleanGrammar(title) || 'New Event';
+    return { title, date, startTime, endTime, allDay };
+  } catch (e) {
+    console.error('Chrono event parser failed:', e);
+    return {
+      title: cleanGrammar(text) || 'New Event',
+      date: new Date().toISOString().slice(0, 10),
+      allDay: true
+    };
+  }
+}
 
 // ─── System Prompt ─────────────────────────────────────────────────────────────
 
@@ -128,10 +221,11 @@ export async function processChat(
   if (isReminderCmd) {
     intentAction = 'create_reminder';
     const cmdText = cleanMsg.slice(cleanMsg.toLowerCase().indexOf('/reminder') + 9).trim();
-    // Default values if AI extraction fails/offline
+    const localParsed = parseLocalReminder(cmdText);
     intentArgs = {
-      title: cmdText || 'New Reminder',
-      dueDate: new Date().toISOString().slice(0, 10),
+      title: localParsed.title,
+      dueDate: localParsed.dueDate,
+      dueTime: localParsed.dueTime,
       description: '',
       tags: [],
     };
@@ -168,10 +262,11 @@ Rules:
   } else if (isNoteCmd) {
     intentAction = 'create_note';
     const cmdText = cleanMsg.slice(cleanMsg.toLowerCase().indexOf('/note') + 5).trim();
-    // Default values if AI extraction fails/offline
+    const localParsedTitle = cleanGrammar(cmdText.split('\n')[0]?.slice(0, 50) || 'New Note');
+    const localParsedContent = cleanGrammar(cmdText);
     intentArgs = {
-      title: cmdText.split('\n')[0]?.slice(0, 50) || 'New Note',
-      content: cmdText,
+      title: localParsedTitle,
+      content: localParsedContent,
       tags: [],
       folder: 'root',
     };
@@ -200,13 +295,15 @@ Respond with ONLY a valid JSON object in this format:
   } else if (isEventCmd) {
     intentAction = 'create_event';
     const cmdText = cleanMsg.slice(cleanMsg.toLowerCase().indexOf('/event') + 6).trim();
-    // Default values if AI extraction fails/offline
+    const localParsed = parseLocalEvent(cmdText);
     intentArgs = {
-      title: cmdText || 'New Event',
-      date: new Date().toISOString().slice(0, 10),
+      title: localParsed.title,
+      date: localParsed.date,
+      startTime: localParsed.startTime,
+      endTime: localParsed.endTime,
+      allDay: localParsed.allDay,
       description: '',
       tags: [],
-      allDay: true,
     };
 
     if (hasProvider && provider) {
