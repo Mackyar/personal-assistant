@@ -47,11 +47,10 @@ export default function DashboardPage() {
 
   async function generateSummary(events: CalendarEvent[], rems: Reminder[]) {
     const settings = await getSettings();
-    if (!hasRequiredKey(settings)) return;
 
-    // Check cache first to avoid quota drain
+    // Check cache first to avoid quota drain or repeated local requests
     const todayKey = new Date().toISOString().slice(0, 10);
-    const cacheKey = `ai_summary_${todayKey}_${settings.activeProvider}`;
+    const cacheKey = `ai_summary_${todayKey}_ollama`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       setAiSummary(cached);
@@ -60,7 +59,9 @@ export default function DashboardPage() {
 
     setSummaryLoading(true);
     try {
-      const provider = await getAIProvider(settings);
+      const { OllamaProvider } = await import('@/lib/ai/providers/ollama');
+      const provider = new OllamaProvider(settings.ollamaBaseUrl, settings.ollamaModel);
+
       const context = [
         `Today is ${new Date().toDateString()}.`,
         events.length > 0 ? `Today's events: ${events.map((e) => `${e.title}${e.startTime ? ' at ' + formatTime(e.startTime) : ''}`).join(', ')}` : 'No events today.',
@@ -72,7 +73,10 @@ export default function DashboardPage() {
       ]);
       setAiSummary(summary);
       localStorage.setItem(cacheKey, summary);
-    } catch {}
+    } catch (e) {
+      console.error('Ollama daily summary failed:', e);
+      setAiSummary('Ollama local assistant offline. Start Ollama to see your daily schedule summary.');
+    }
     setSummaryLoading(false);
   }
 

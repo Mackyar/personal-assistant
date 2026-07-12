@@ -151,7 +151,7 @@ export default function SearchPage() {
                           </span>
                         </div>
                         {r.snippet && (
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">{r.snippet}</p>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed whitespace-pre-line">{r.snippet}</p>
                         )}
                         <span className="text-[10px] text-muted-foreground capitalize mt-1 inline-block opacity-60">{r.type}</span>
                       </div>
