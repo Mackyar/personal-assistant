@@ -249,8 +249,10 @@ function NoteCard({ note, onRefresh }: { note: Note; onRefresh: () => void }) {
           </button>
         </div>
       </div>
-      {note.contentText && note.contentText.trim() && (
-        <p className="text-xs text-muted-foreground leading-relaxed mb-2 whitespace-pre-line">{note.contentText.trim()}</p>
+      {note.content && (
+        <div className="mb-2">
+          <ReadOnlyNoteContent contentJson={note.content} />
+        </div>
       )}
       <div className="flex items-center justify-between">
         <div className="flex flex-wrap gap-1">
@@ -261,5 +263,100 @@ function NoteCard({ note, onRefresh }: { note: Note; onRefresh: () => void }) {
         <span className="text-[10px] text-muted-foreground">{formatRelativeDate(note.updatedAt)}</span>
       </div>
     </Link>
+  );
+}
+
+function ReadOnlyNoteContent({ contentJson }: { contentJson: string }) {
+  let doc: any = null;
+  try {
+    doc = JSON.parse(contentJson);
+  } catch {
+    return <p className="text-xs text-muted-foreground whitespace-pre-line">{contentJson}</p>;
+  }
+
+  if (!doc || doc.type !== 'doc' || !Array.isArray(doc.content)) {
+    return null;
+  }
+
+  function renderMark(text: string, marks: any[]) {
+    let result: React.ReactNode = text;
+    for (const mark of marks) {
+      if (mark.type === 'bold') {
+        result = <strong className="font-semibold text-foreground" key={mark.type}>{result}</strong>;
+      } else if (mark.type === 'italic') {
+        result = <em className="italic" key={mark.type}>{result}</em>;
+      } else if (mark.type === 'underline') {
+        result = <span className="underline" key={mark.type}>{result}</span>;
+      } else if (mark.type === 'strike') {
+        result = <span className="line-through" key={mark.type}>{result}</span>;
+      } else if (mark.type === 'code') {
+        result = <code className="bg-secondary px-1 py-0.5 rounded text-[10px] font-mono" key={mark.type}>{result}</code>;
+      } else if (mark.type === 'highlight') {
+        result = <mark className="bg-primary/20 text-primary px-0.5 rounded" key={mark.type}>{result}</mark>;
+      } else if (mark.type === 'link') {
+        result = <span className="text-primary underline cursor-pointer" key={mark.type}>{result}</span>;
+      }
+    }
+    return result;
+  }
+
+  function renderNode(node: any, index: number): React.ReactNode {
+    if (!node) return null;
+
+    switch (node.type) {
+      case 'paragraph':
+        return (
+          <p key={index} className="text-xs text-muted-foreground leading-relaxed my-0.5 min-h-[4px]">
+            {Array.isArray(node.content) ? node.content.map((child: any, i: number) => renderNode(child, i)) : ' '}
+          </p>
+        );
+      case 'text':
+        if (Array.isArray(node.marks)) {
+          return <span key={index}>{renderMark(node.text, node.marks)}</span>;
+        }
+        return <span key={index}>{node.text}</span>;
+      case 'bulletList':
+        return (
+          <ul key={index} className="list-disc pl-4 my-1 space-y-0.5 text-xs text-muted-foreground leading-relaxed">
+            {Array.isArray(node.content) && node.content.map((child: any, i: number) => renderNode(child, i))}
+          </ul>
+        );
+      case 'orderedList':
+        return (
+          <ol key={index} className="list-decimal pl-4 my-1 space-y-0.5 text-xs text-muted-foreground leading-relaxed">
+            {Array.isArray(node.content) && node.content.map((child: any, i: number) => renderNode(child, i))}
+          </ol>
+        );
+      case 'listItem':
+        return (
+          <li key={index}>
+            {Array.isArray(node.content) && node.content.map((child: any, i: number) => renderNode(child, i))}
+          </li>
+        );
+      case 'heading':
+        const level = node.attrs?.level || 1;
+        const sizeClass = level === 1 ? 'text-sm font-semibold mt-2 mb-1 text-foreground' : 'text-xs font-semibold mt-1.5 mb-1 text-foreground';
+        return (
+          <div key={index} className={sizeClass}>
+            {Array.isArray(node.content) && node.content.map((child: any, i: number) => renderNode(child, i))}
+          </div>
+        );
+      case 'blockquote':
+        return (
+          <blockquote key={index} className="border-l-2 border-primary/30 pl-2 italic my-1 text-xs text-muted-foreground">
+            {Array.isArray(node.content) && node.content.map((child: any, i: number) => renderNode(child, i))}
+          </blockquote>
+        );
+      case 'hardBreak':
+        return <br key={index} />;
+      default:
+        return null;
+    }
+  }
+
+  return (
+    <div className="space-y-0.5">
+      {doc.content.map((node: any, i: number) => renderNode(node, i))}
+    </div>
   );
 }
