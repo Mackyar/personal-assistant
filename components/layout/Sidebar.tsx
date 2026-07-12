@@ -59,9 +59,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className="px-4 py-5 border-b border-border">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #0ea5e9, #06b6d4)' }}>
-            <Calendar size={16} className="text-white" />
-          </div>
+          <img src="/favicon.png" className="w-8 h-8 object-cover rounded-lg flex-shrink-0" alt="Yay Schedule Logo" />
           <div>
             <h1 className="font-semibold text-sm text-foreground">Yay Schedule</h1>
             <p className="text-xs text-muted-foreground">Personal Schedule</p>

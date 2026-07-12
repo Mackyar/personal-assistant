@@ -46,7 +46,7 @@ export default function SearchPage() {
     const allResults: SearchResult[] = [
       ...notes.map((n) => ({
         id: n.id, type: 'note' as const, title: n.title,
-        snippet: n.contentText.slice(0, 150),
+        snippet: n.contentText.trim().slice(0, 150),
         href: `/notes/${n.id}`, timestamp: n.updatedAt,
       })),
       ...events.map((e) => ({
