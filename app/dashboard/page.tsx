@@ -159,7 +159,7 @@ export default function DashboardPage() {
             icon={<Clock size={15} className="text-amber-400" />}
             title="Upcoming Reminders"
             count={reminders.length}
-            href="/chat"
+            href="/reminders"
           >
             {reminders.length === 0 ? (
               <p className="text-xs text-muted-foreground py-2">All clear! No pending reminders.</p>

@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageSquare, Calendar, FileText, LayoutDashboard, Settings } from 'lucide-react';
+import { MessageSquare, Calendar, FileText, LayoutDashboard, Settings, ListTodo } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Home' },
   { href: '/chats', icon: MessageSquare, label: 'Chat' },
   { href: '/calendar', icon: Calendar, label: 'Calendar' },
+  { href: '/reminders', icon: ListTodo, label: 'Reminders' },
   { href: '/notes', icon: FileText, label: 'Notes' },
   { href: '/settings', icon: Settings, label: 'Settings' },
 ];
